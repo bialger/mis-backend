@@ -95,6 +95,9 @@ EOF
 run_as_root cp "$SERVICE_FILE" "/etc/systemd/system/${SERVICE_NAME}.service"
 rm -f "$SERVICE_FILE"
 
+# Reload unit definitions immediately after writing service file.
+run_as_root systemctl daemon-reload
+
 # Stop previous service/processes before restart to avoid stale bind on app port
 run_as_root systemctl stop "${SERVICE_NAME}.service" || true
 run_as_root pkill -f "${APP_DIR}/app.jar" || true
@@ -107,7 +110,6 @@ if [ -n "$(port_listener_pids || true)" ]; then
   exit 1
 fi
 
-run_as_root systemctl daemon-reload
 run_as_root systemctl enable "${SERVICE_NAME}.service"
 run_as_root systemctl restart "${SERVICE_NAME}.service"
 run_as_root systemctl --no-pager --full status "${SERVICE_NAME}.service" | head -n 30
@@ -127,13 +129,27 @@ if command -v ss >/dev/null 2>&1; then
 fi
 
 if command -v curl >/dev/null 2>&1; then
-  echo "Local health check:"
-  HTTP_CODE="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${APP_PORT}/" || true)"
-  if [[ "$HTTP_CODE" =~ ^(2|3) ]]; then
-    echo "OK: localhost:${APP_PORT} returned HTTP $HTTP_CODE"
-  else
-    echo "ERROR: localhost:${APP_PORT} returned HTTP $HTTP_CODE"
-    run_as_root journalctl -u "${SERVICE_NAME}.service" -n 100 --no-pager || true
+  echo "Local health check (waiting for service readiness):"
+  READY=0
+  for _ in $(seq 1 60); do
+    if ! run_as_root systemctl is-active --quiet "${SERVICE_NAME}.service"; then
+      echo "Service is not active while waiting for readiness."
+      break
+    fi
+
+    HTTP_CODE="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${APP_PORT}/" || true)"
+    if [[ "$HTTP_CODE" =~ ^(2|3|4) ]]; then
+      echo "OK: localhost:${APP_PORT} returned HTTP $HTTP_CODE"
+      READY=1
+      break
+    fi
+    sleep 1
+  done
+
+  if [ "$READY" -ne 1 ]; then
+    echo "ERROR: service did not become ready on localhost:${APP_PORT}"
+    run_as_root systemctl --no-pager --full status "${SERVICE_NAME}.service" || true
+    run_as_root journalctl -u "${SERVICE_NAME}.service" -n 150 --no-pager || true
     print_port_diagnostics || true
     exit 1
   fi
