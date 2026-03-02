@@ -1,0 +1,110 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: "21"
+  HOST: "mis.bialger.com"
+
+jobs:
+  ci:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository (with frontend submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Run tests and build fat jar
+        run: ./gradlew clean test shadowJar
+
+      - name: Prepare deployment artifact
+        run: |
+          JAR_PATH="$(ls build/libs/*-all.jar | head -n1)"
+          mkdir -p dist
+          cp "$JAR_PATH" dist/app.jar
+          cp deploy/install-service.sh dist/deploy.sh
+          chmod +x dist/deploy.sh
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-bundle
+          path: dist/*
+          retention-days: 7
+
+  deploy:
+    name: Deploy to mis.bialger.com
+    needs: ci
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://mis.bialger.com
+
+    steps:
+      - name: Download deployment artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-bundle
+          path: release
+
+      - name: Upload deployment bundle to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ secrets.SERVER_LOGIN }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: "release/*"
+          target: "/tmp/mis-release"
+
+      - name: Install and restart service on server
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          SERVER_LOGIN: ${{ secrets.SERVER_LOGIN }}
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ secrets.SERVER_LOGIN }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          envs: SERVER_PASSWORD,SERVER_LOGIN
+          script: |
+            set -euo pipefail
+
+            BUNDLE_DIR="/tmp/mis-release"
+            DEPLOY_SCRIPT="$(find "$BUNDLE_DIR" -maxdepth 4 -type f -name deploy.sh | head -n1)"
+            APP_JAR_PATH="$(find "$BUNDLE_DIR" -maxdepth 4 -type f -name app.jar | head -n1)"
+
+            if [ -z "$DEPLOY_SCRIPT" ] || [ -z "$APP_JAR_PATH" ]; then
+              echo "Deployment bundle is incomplete on server."
+              exit 1
+            fi
+
+            chmod +x "$DEPLOY_SCRIPT"
+            export ARTIFACT_JAR="$APP_JAR_PATH"
+            export APP_NAME="mis"
+            export SERVICE_NAME="mis"
+            export APP_USER="$SERVER_LOGIN"
+            export APP_DIR="/opt/mis"
+            export SUDO_PASSWORD="$SERVER_PASSWORD"
+            "$DEPLOY_SCRIPT"
