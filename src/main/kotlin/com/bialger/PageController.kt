@@ -22,14 +22,12 @@ class PageController {
     )
 
     @Get("/login")
-    fun login(): ModelAndView<Map<String, Any>> = appPage(
+    fun login(): ModelAndView<Map<String, Any>> = publicPage(
         title = "Вход в систему - Медицинская CRM",
         activePage = "login",
         contentView = "pages/content/login",
         pageScript = "login-app.js",
-        showHeader = false,
-        showSidebar = false,
-        publicLayout = true
+        showFooter = true
     )
 
     @Get("/patients")
@@ -113,14 +111,12 @@ class PageController {
     )
 
     @Get("/patient-booking")
-    fun patientBooking(): ModelAndView<Map<String, Any>> = appPage(
+    fun patientBooking(): ModelAndView<Map<String, Any>> = publicPage(
         title = "Онлайн-запись к врачу",
         activePage = "appointments",
         contentView = "pages/content/patient-booking",
         pageScript = "patient-booking.js",
-        showHeader = false,
-        showSidebar = false,
-        publicLayout = true
+        showFooter = true
     )
 
     @Get("/{legacyPage}.html")
@@ -198,6 +194,33 @@ class PageController {
         model.putAll(extra)
 
         return ModelAndView("pages/app", model)
+    }
+
+    private fun publicPage(
+        title: String,
+        activePage: String,
+        contentView: String,
+        contentFragment: String = "content",
+        pageScript: String? = null,
+        showFooter: Boolean = true,
+        extra: Map<String, Any> = emptyMap()
+    ): ModelAndView<Map<String, Any>> {
+        val model = mutableMapOf<String, Any>(
+            "title" to title,
+            "activePage" to activePage,
+            "contentView" to contentView,
+            "contentFragment" to contentFragment,
+            "showFooter" to showFooter,
+            "currentYear" to 2026,
+            "lastUpdated" to LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+        )
+
+        if (pageScript != null) {
+            model["pageScript"] = pageScript
+        }
+        model.putAll(extra)
+
+        return ModelAndView("pages/public", model)
     }
 
     private fun loadFrontendSection(frontendFile: String): String {

@@ -1,6 +1,7 @@
 package com.bialger
 
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import io.micronaut.runtime.EmbeddedApplication
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
@@ -26,5 +27,19 @@ class MisTest(
     "test frontend static css is served by micronaut" {
         val css = client.toBlocking().retrieve("/assets/css/base.css")
         css shouldContain ":root"
+    }
+
+    "test login page has footer without header and sidebar" {
+        val html = client.toBlocking().retrieve("/login")
+        html shouldContain "<footer class=\"l-footer\""
+        html shouldNotContain "<header class=\"l-header\""
+        html shouldNotContain "<aside class=\"m-aside\""
+    }
+
+    "test patient booking page has footer without header and sidebar" {
+        val html = client.toBlocking().retrieve("/patient-booking")
+        html shouldContain "<footer class=\"l-footer\""
+        html shouldNotContain "<header class=\"l-header\""
+        html shouldNotContain "<aside class=\"m-aside\""
     }
 })
