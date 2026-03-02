@@ -33,3 +33,7 @@ replay_pid*
 # Gradle
 .gradle/
 build/
+
+# Gradle wrapper must be versioned
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
