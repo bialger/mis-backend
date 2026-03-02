@@ -1,4 +1,6 @@
 import org.gradle.language.jvm.tasks.ProcessResources
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     id("org.jetbrains.kotlin.jvm") version "1.9.25"
@@ -36,7 +38,14 @@ application {
     mainClass = "com.bialger.ApplicationKt"
 }
 java {
-    sourceCompatibility = JavaVersion.toVersion("24")
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType<KotlinJvmCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_21)
+    }
 }
 
 
@@ -65,7 +74,7 @@ micronaut {
 
 
 tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative") {
-    jdkVersion = "24"
+    jdkVersion = "21"
 }
 
 tasks.named<ProcessResources>("processResources") {

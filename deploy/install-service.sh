@@ -9,7 +9,7 @@ ARTIFACT_JAR="${ARTIFACT_JAR:-app.jar}"
 SUDO_PASSWORD="${SUDO_PASSWORD:-}"
 
 if ! command -v java >/dev/null 2>&1; then
-  echo "Java is not installed. Install JRE/JDK 24+ before deployment."
+  echo "Java is not installed. Install JRE/JDK 21+ before deployment."
   exit 1
 fi
 
