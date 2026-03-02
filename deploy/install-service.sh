@@ -6,7 +6,7 @@ SERVICE_NAME="${SERVICE_NAME:-mis}"
 APP_USER="${APP_USER:-$USER}"
 APP_DIR="${APP_DIR:-/opt/mis}"
 ARTIFACT_JAR="${ARTIFACT_JAR:-app.jar}"
-APP_PORT="${APP_PORT:-8080}"
+APP_PORT="${APP_PORT:-8000}"
 SUDO_PASSWORD="${SUDO_PASSWORD:-}"
 
 if ! command -v java >/dev/null 2>&1; then
