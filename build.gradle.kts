@@ -86,5 +86,9 @@ tasks.named<ProcessResources>("processResources") {
         include("favicon.ico")
         include("design.png")
     }
+    from("frontend") {
+        into("static/pages")
+        include("*.html")
+    }
 }
 

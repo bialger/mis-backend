@@ -1,14 +1,9 @@
 <!DOCTYPE html>
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <body>
-<div class="m-user-info" th:fragment="sessionInfo(authenticated, username)">
-    <th:block th:if="${authenticated}">
-        <span>Вы вошли как <strong th:text="${username}">Пользователь</strong></span>
-        <a th:href="@{/login}" class="m-link">Сменить пользователя</a>
-    </th:block>
-    <th:block th:unless="${authenticated}">
+<div class="m-user-info" id="session-info" th:fragment="sessionInfo()">
+    <th:block>
         <a th:href="@{/login}" class="m-button is-hoverable-button">Вход</a>
-        <a th:href="@{/patient-booking}" class="m-link">Регистрация</a>
     </th:block>
 </div>
 </body>

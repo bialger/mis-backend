@@ -6,6 +6,7 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.views.ModelAndView
 import java.net.URI
+import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -17,8 +18,7 @@ class PageController {
         title = "Медицинская CRM - Панель управления",
         activePage = "dashboard",
         contentView = "pages/content/dashboard",
-        pageScript = "dashboard-app.js",
-        extra = mapOf("todayAppointments" to mockAppointments())
+        pageScript = "dashboard-app.js"
     )
 
     @Get("/login")
@@ -27,134 +27,113 @@ class PageController {
         activePage = "login",
         contentView = "pages/content/login",
         pageScript = "login-app.js",
-        authenticated = false,
-        username = "Гость",
-        showSidebar = false
+        showHeader = false,
+        showSidebar = false,
+        publicLayout = true
     )
 
     @Get("/patients")
-    fun patients(): ModelAndView<Map<String, Any>> = genericPage(
+    fun patients(): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Медицинская CRM - Пациенты",
         activePage = "patients",
-        heading = "Пациенты",
-        description = "Список пациентов, фильтрация и быстрый переход в карточку пациента.",
-        mountId = "patients-app",
+        frontendFile = "patients.html",
         pageScript = "patients-app.js"
     )
 
     @Get("/patients/{id}")
-    fun patientDetail(id: Long): ModelAndView<Map<String, Any>> = genericPage(
+    fun patientDetail(id: Long): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Карточка пациента - Медицинская CRM",
         activePage = "patients",
-        heading = "Карточка пациента #$id",
-        description = "Подробные данные пациента, история посещений и назначения.",
-        mountId = "patient-detail-app",
+        frontendFile = "patient-detail.html",
         pageScript = "patient-detail-app.js"
     )
 
     @Get("/doctors")
-    fun doctors(): ModelAndView<Map<String, Any>> = genericPage(
+    fun doctors(): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Медицинская CRM - Врачи",
         activePage = "doctors",
-        heading = "Врачи",
-        description = "Управление карточками врачей и доступными слотами для записи.",
-        mountId = "doctors-app",
+        frontendFile = "doctors.html",
         pageScript = "doctors-app.js"
     )
 
     @Get("/schedule")
-    fun schedule(): ModelAndView<Map<String, Any>> = genericPage(
+    fun schedule(): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Медицинская CRM - Расписание",
         activePage = "schedule",
-        heading = "Расписание",
-        description = "Календарь приемов и управление расписанием специалистов.",
-        mountId = "schedule-app",
+        frontendFile = "schedule.html",
         pageScript = "schedule-app.js"
     )
 
     @Get("/reports")
-    fun reports(): ModelAndView<Map<String, Any>> = genericPage(
+    fun reports(): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Медицинская CRM - Отчеты",
         activePage = "reports",
-        heading = "Отчеты",
-        description = "Формирование управленческих и финансовых отчетов по работе клиники.",
-        mountId = "reports-app",
+        frontendFile = "reports.html",
         pageScript = "reports-app.js"
     )
 
     @Get("/inventory")
-    fun inventory(): ModelAndView<Map<String, Any>> = genericPage(
+    fun inventory(): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Медицинская CRM - Склад",
         activePage = "inventory",
-        heading = "Склад",
-        description = "Контроль остатков, расхода материалов и уведомления о дефиците.",
-        mountId = "inventory-app",
+        frontendFile = "inventory.html",
         pageScript = "inventory-app.js"
     )
 
     @Get("/audit")
-    fun audit(): ModelAndView<Map<String, Any>> = genericPage(
+    fun audit(): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Медицинская CRM - Логи действий",
         activePage = "audit",
-        heading = "Аудит",
-        description = "Журнал действий пользователей и технических операций в системе.",
-        mountId = "audit-app",
+        frontendFile = "audit.html",
         pageScript = "audit-app.js"
     )
 
     @Get("/settings")
-    fun settings(): ModelAndView<Map<String, Any>> = genericPage(
+    fun settings(): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Медицинская CRM - Настройки",
         activePage = "settings",
-        heading = "Настройки",
-        description = "Управление параметрами системы, ролями и конфигурацией окружения.",
-        mountId = "settings-app",
+        frontendFile = "settings.html",
         pageScript = "settings-app.js"
     )
 
     @Get("/appointments")
-    fun appointments(): ModelAndView<Map<String, Any>> = genericPage(
+    fun appointments(): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Медицинская CRM - Записи на услуги",
         activePage = "appointments",
-        heading = "Записи на услуги",
-        description = "Создание и редактирование записей пациентов на медицинские услуги.",
-        mountId = "appointment-new-app",
+        frontendFile = "appointment.html",
         pageScript = "appointment-new-app.js"
     )
 
     @Get("/appointments/{id}")
-    fun appointmentDetail(id: Long): ModelAndView<Map<String, Any>> = genericPage(
+    fun appointmentDetail(id: Long): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Карточка записи - Медицинская CRM",
         activePage = "appointments",
-        heading = "Карточка записи #$id",
-        description = "Просмотр деталей записи, статуса и истории изменений.",
-        mountId = "appointment-detail-app",
+        frontendFile = "appointment-detail.html",
         pageScript = "appointment-detail-app.js"
     )
 
     @Get("/patient-booking")
-    fun patientBooking(): ModelAndView<Map<String, Any>> = genericPage(
+    fun patientBooking(): ModelAndView<Map<String, Any>> = appPage(
         title = "Онлайн-запись к врачу",
         activePage = "appointments",
-        heading = "Онлайн-запись",
-        description = "Публичная форма записи пациента к врачу.",
-        mountId = "patient-booking-app",
+        contentView = "pages/content/patient-booking",
         pageScript = "patient-booking.js",
-        authenticated = false,
-        username = "Гость",
-        showSidebar = false
+        showHeader = false,
+        showSidebar = false,
+        publicLayout = true
     )
 
     @Get("/{legacyPage}.html")
     fun legacyRoutes(
         legacyPage: String,
-        @QueryValue("id") id: Long?
+        @QueryValue("id") id: String?
     ): HttpResponse<Any> {
+        val idLong = id?.toLongOrNull()
         val target = when (legacyPage) {
             "index" -> "/"
             "login" -> "/login"
             "patients" -> "/patients"
-            "patient-detail" -> if (id != null) "/patients/$id" else "/patients"
+            "patient-detail" -> if (idLong != null) "/patients/$idLong" else "/patients"
             "doctors" -> "/doctors"
             "schedule" -> "/schedule"
             "reports" -> "/reports"
@@ -162,36 +141,30 @@ class PageController {
             "audit" -> "/audit"
             "settings" -> "/settings"
             "appointment" -> "/appointments"
-            "appointment-detail" -> if (id != null) "/appointments/$id" else "/appointments"
+            "appointment-detail" -> if (idLong != null) "/appointments/$idLong" else "/appointments"
             "patient-booking" -> "/patient-booking"
             else -> "/"
         }
         return HttpResponse.redirect(URI.create(target))
     }
 
-    private fun genericPage(
+    private fun frontendPage(
         title: String,
         activePage: String,
-        heading: String,
-        description: String,
-        mountId: String,
+        frontendFile: String,
         pageScript: String,
-        authenticated: Boolean = true,
-        username: String = "Иван Сидоров",
+        showHeader: Boolean = true,
+        showFooter: Boolean = true,
         showSidebar: Boolean = true
     ): ModelAndView<Map<String, Any>> = appPage(
         title = title,
         activePage = activePage,
-        contentView = "pages/content/generic",
+        contentView = "pages/content/frontend-page",
         pageScript = pageScript,
-        authenticated = authenticated,
-        username = username,
+        showHeader = showHeader,
+        showFooter = showFooter,
         showSidebar = showSidebar,
-        extra = mapOf(
-            "pageHeading" to heading,
-            "pageDescription" to description,
-            "mountId" to mountId
-        )
+        extra = mapOf("frontendSectionHtml" to loadFrontendSection(frontendFile))
     )
 
     private fun appPage(
@@ -200,11 +173,10 @@ class PageController {
         contentView: String,
         contentFragment: String = "content",
         pageScript: String? = null,
-        authenticated: Boolean = true,
-        username: String = "Иван Сидоров",
         showHeader: Boolean = true,
         showFooter: Boolean = true,
         showSidebar: Boolean = true,
+        publicLayout: Boolean = false,
         extra: Map<String, Any> = emptyMap()
     ): ModelAndView<Map<String, Any>> {
         val model = mutableMapOf<String, Any>(
@@ -212,11 +184,10 @@ class PageController {
             "activePage" to activePage,
             "contentView" to contentView,
             "contentFragment" to contentFragment,
-            "authenticated" to authenticated,
-            "username" to username,
             "showHeader" to showHeader,
             "showFooter" to showFooter,
             "showSidebar" to showSidebar,
+            "publicLayout" to publicLayout,
             "currentYear" to 2026,
             "lastUpdated" to LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
         )
@@ -229,16 +200,41 @@ class PageController {
         return ModelAndView("pages/app", model)
     }
 
-    private fun mockAppointments(): List<AppointmentCard> = listOf(
-        AppointmentCard("09:00", "Иванов И.И.", "/appointments/101", false),
-        AppointmentCard("10:30", "Петрова А.С.", "/appointments/102", true),
-        AppointmentCard("12:15", "Смирнов К.Д.", "/appointments/103", false)
-    )
+    private fun loadFrontendSection(frontendFile: String): String {
+        val resourcePath = "/static/pages/$frontendFile"
+        val inputStream = javaClass.getResourceAsStream(resourcePath) ?: return """
+            <section class="m-section">
+                <div class="m-error-message">Шаблон страницы не найден: $frontendFile</div>
+            </section>
+        """.trimIndent()
 
-    private data class AppointmentCard(
-        val time: String,
-        val patient: String,
-        val link: String,
-        val isNew: Boolean
-    )
+        val html = inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+        val mainContent = extractByMarkers(
+            html = html,
+            startMarker = "<div class=\"l-main-content\">",
+            endMarker = "<div id=\"sidebar-placeholder\"></div>"
+        )
+        if (mainContent != null) {
+            return mainContent
+        }
+
+        val sectionMatch = Regex("(?is)<section\\b.*?</section>").find(html)
+        return sectionMatch?.value ?: """
+            <section class="m-section">
+                <div class="m-error-message">Не удалось извлечь контент страницы: $frontendFile</div>
+            </section>
+        """.trimIndent()
+    }
+
+    private fun extractByMarkers(html: String, startMarker: String, endMarker: String): String? {
+        val start = html.indexOf(startMarker)
+        if (start == -1) {
+            return null
+        }
+        val end = html.indexOf(endMarker, start + startMarker.length)
+        if (end == -1) {
+            return null
+        }
+        return html.substring(start, end).trim()
+    }
 }

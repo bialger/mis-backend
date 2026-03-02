@@ -18,9 +18,8 @@
 
     <script th:src="@{/assets/js/api.js}"></script>
     <script th:src="@{/assets/js/auth.js}"></script>
-    <script th:src="@{/assets/js/components.js}"></script>
     <script th:src="@{/assets/js/main.js}"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script th:src="@{/assets/js/vendor/vue.global.prod.js}"></script>
     <script th:if="${pageScript != null}" type="module" th:src="@{|/assets/js/vue/${pageScript}|}"></script>
 </head>
 </html>
