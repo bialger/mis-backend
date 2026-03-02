@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Вход в систему</h2>
+    <div id="login-app">
+        <p class="m-preloader">Загрузка формы входа...</p>
+    </div>
+    <p style="margin-top: 1rem;">
+        <a th:href="@{/patient-booking}" class="m-link">Онлайн-запись для пациентов</a>
+    </p>
+</section>
+</body>
+</html>

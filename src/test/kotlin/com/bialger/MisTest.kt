@@ -1,6 +1,6 @@
 package com.bialger
 
-import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.micronaut.runtime.EmbeddedApplication
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
@@ -17,7 +17,14 @@ class MisTest(
         assert(application.isRunning)
     }
 
-    "test root endpoint returns status message" {
-        client.toBlocking().retrieve("/") shouldBe "MIS web server is running"
+    "test root endpoint renders dashboard page" {
+        val html = client.toBlocking().retrieve("/")
+        html shouldContain "Панель управления"
+        html shouldContain "Медицинская CRM система"
+    }
+
+    "test frontend static css is served by micronaut" {
+        val css = client.toBlocking().retrieve("/assets/css/base.css")
+        css shouldContain ":root"
     }
 })

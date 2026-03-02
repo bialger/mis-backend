@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Панель управления</h2>
+
+    <div class="m-dashboard-welcome">
+        <h3 th:text="|Добро пожаловать, ${username}!|">Добро пожаловать!</h3>
+        <p>Сегодня у вас <strong th:text="${todayAppointments.size()}">0</strong> записей.</p>
+    </div>
+
+    <div class="m-dashboard-section">
+        <h3>Сегодня</h3>
+        <div class="m-appointments-list">
+            <div th:if="${todayAppointments.isEmpty()}">
+                <p>Нет записей на сегодня</p>
+            </div>
+            <th:block th:each="apt : ${todayAppointments}">
+                <div th:replace="~{fragments/cards :: appointmentCard(${apt.time}, ${apt.patient}, ${apt.link}, ${apt.isNew})}"></div>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="m-dashboard-actions">
+        <a th:href="@{/schedule}" class="m-button is-hoverable-button">Перейти к расписанию</a>
+        <a th:href="@{/patients}" class="m-button is-hoverable-button">Найти пациента</a>
+    </div>
+</section>
+</body>
+</html>

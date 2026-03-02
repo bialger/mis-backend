@@ -1,3 +1,5 @@
+import org.gradle.language.jvm.tasks.ProcessResources
+
 plugins {
     id("org.jetbrains.kotlin.jvm") version "1.9.25"
     id("org.jetbrains.kotlin.plugin.allopen") version "1.9.25"
@@ -19,6 +21,7 @@ dependencies {
     ksp("io.micronaut:micronaut-http-validation")
     ksp("io.micronaut.serde:micronaut-serde-processor")
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
+    implementation("io.micronaut.views:micronaut-views-thymeleaf")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
@@ -65,4 +68,14 @@ tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative"
     jdkVersion = "21"
 }
 
+tasks.named<ProcessResources>("processResources") {
+    from("frontend") {
+        into("static")
+        include("css/**")
+        include("js/**")
+        include("api_data/**")
+        include("favicon.ico")
+        include("design.png")
+    }
+}
 
