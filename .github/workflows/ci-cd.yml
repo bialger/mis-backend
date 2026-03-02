@@ -13,6 +13,7 @@ on:
 
 env:
   JAVA_VERSION: "25"
+  GRADLE_JAVA_VERSION: "21"
   HOST: "mis.bialger.com"
 
 jobs:
@@ -28,18 +29,31 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
 
-      - name: Set up JDK
+      - name: Set up JDK for Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.GRADLE_JAVA_VERSION }}
+          cache: gradle
+
+      - name: Set up primary JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: gradle
+
+      - name: Show Java versions
+        run: |
+          echo "Primary JAVA_HOME=$JAVA_HOME"
+          java -version
+          echo "Gradle JAVA_HOME_21_X64=$JAVA_HOME_21_X64"
+          "$JAVA_HOME_21_X64/bin/java" -version
 
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
       - name: Run tests and build fat jar
-        run: ./gradlew clean test shadowJar
+        run: ./gradlew clean test shadowJar -Dorg.gradle.java.home="$JAVA_HOME_21_X64"
 
       - name: Prepare deployment artifact
         run: |
