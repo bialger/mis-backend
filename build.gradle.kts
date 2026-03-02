@@ -36,7 +36,7 @@ application {
     mainClass = "com.bialger.ApplicationKt"
 }
 java {
-    sourceCompatibility = JavaVersion.toVersion("21")
+    sourceCompatibility = JavaVersion.toVersion("24")
 }
 
 
@@ -65,7 +65,7 @@ micronaut {
 
 
 tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative") {
-    jdkVersion = "21"
+    jdkVersion = "24"
 }
 
 tasks.named<ProcessResources>("processResources") {
