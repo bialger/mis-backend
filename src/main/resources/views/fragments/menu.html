@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="mainMenu(activePage)">
+    <li><a th:href="@{/}" class="is-hoverable-link"
+           th:classappend="${activePage == 'dashboard'} ? ' is-active-link'">Панель управления</a></li>
+    <li><a th:href="@{/patients}" class="is-hoverable-link"
+           th:classappend="${activePage == 'patients'} ? ' is-active-link'">Пациенты</a></li>
+    <li><a th:href="@{/doctors}" class="is-hoverable-link"
+           th:classappend="${activePage == 'doctors'} ? ' is-active-link'">Врачи</a></li>
+    <li><a th:href="@{/schedule}" class="is-hoverable-link"
+           th:classappend="${activePage == 'schedule'} ? ' is-active-link'">Расписание</a></li>
+    <li><a th:href="@{/reports}" class="is-hoverable-link"
+           th:classappend="${activePage == 'reports'} ? ' is-active-link'">Отчеты</a></li>
+    <li><a th:href="@{/inventory}" class="is-hoverable-link"
+           th:classappend="${activePage == 'inventory'} ? ' is-active-link'">Склад</a></li>
+    <li><a th:href="@{/audit}" class="is-hoverable-link"
+           th:classappend="${activePage == 'audit'} ? ' is-active-link'">Аудит</a></li>
+    <li><a th:href="@{/settings}" class="is-hoverable-link"
+           th:classappend="${activePage == 'settings'} ? ' is-active-link'">Настройки</a></li>
+    <li><a th:href="@{/appointments}" class="is-hoverable-link"
+           th:classappend="${activePage == 'appointments'} ? ' is-active-link'">Записи на услуги</a></li>
+</th:block>
+</body>
+</html>

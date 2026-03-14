@@ -1,0 +1,133 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: "21"
+  GRADLE_JAVA_VERSION: "21"
+  HOST: "mis.bialger.com"
+  APP_PORT: "8000"
+
+jobs:
+  ci:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository (with frontend submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+
+      - name: Set up JDK for Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.GRADLE_JAVA_VERSION }}
+          cache: gradle
+
+      - name: Set up primary JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Show Java versions
+        run: |
+          echo "Primary JAVA_HOME=$JAVA_HOME"
+          java -version
+          echo "Gradle JAVA_HOME_21_X64=$JAVA_HOME_21_X64"
+          "$JAVA_HOME_21_X64/bin/java" -version
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Run tests and build fat jar
+        run: ./gradlew clean test shadowJar -Dorg.gradle.java.home="$JAVA_HOME_21_X64"
+
+      - name: Prepare deployment artifact
+        run: |
+          JAR_PATH="$(ls build/libs/*-all.jar | head -n1)"
+          mkdir -p dist
+          cp "$JAR_PATH" dist/app.jar
+          cp deploy/install-service.sh dist/deploy.sh
+          chmod +x dist/deploy.sh
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-bundle
+          path: dist/*
+          retention-days: 7
+
+  deploy:
+    name: Deploy to mis.bialger.com
+    needs: ci
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://mis.bialger.com
+
+    steps:
+      - name: Download deployment artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-bundle
+          path: release
+
+      - name: Upload deployment bundle to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ secrets.SERVER_LOGIN }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: "release/*"
+          target: "/tmp/mis-release"
+          rm: true
+          strip_components: 1
+          overwrite: true
+
+      - name: Install and restart service on server
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          SERVER_LOGIN: ${{ secrets.SERVER_LOGIN }}
+          APP_PORT: ${{ env.APP_PORT }}
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ secrets.SERVER_LOGIN }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          envs: SERVER_PASSWORD,SERVER_LOGIN,APP_PORT
+          script: |
+            set -euo pipefail
+
+            BUNDLE_DIR="/tmp/mis-release"
+            DEPLOY_SCRIPT="$BUNDLE_DIR/deploy.sh"
+            APP_JAR_PATH="$BUNDLE_DIR/app.jar"
+
+            if [ ! -f "$DEPLOY_SCRIPT" ] || [ ! -f "$APP_JAR_PATH" ]; then
+              echo "Deployment bundle files are missing in $BUNDLE_DIR"
+              ls -la "$BUNDLE_DIR" || true
+              exit 1
+            fi
+
+            chmod +x "$DEPLOY_SCRIPT"
+            export ARTIFACT_JAR="$APP_JAR_PATH"
+            export APP_NAME="mis"
+            export SERVICE_NAME="mis"
+            export APP_USER="$SERVER_LOGIN"
+            export APP_DIR="/opt/mis"
+            export APP_PORT="${APP_PORT}"
+            export SUDO_PASSWORD="$SERVER_PASSWORD"
+            "$DEPLOY_SCRIPT"

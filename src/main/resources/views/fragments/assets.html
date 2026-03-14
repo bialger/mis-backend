@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title, pageScript)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+          content="Self-hosted CRM система для медицинских клиник - управление пациентами, записями, расписанием врачей">
+    <meta name="keywords"
+          content="медицинская CRM, управление клиникой, записи пациентов, расписание врачей, медицинская администрация">
+    <link rel="icon" type="image/x-icon" th:href="@{/assets/favicon.ico}">
+    <title th:text="${title}">Медицинская CRM</title>
+
+    <link rel="stylesheet" th:href="@{/assets/css/base.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/module.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/state.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/responsive.css}">
+
+    <script th:src="@{/assets/js/api.js}"></script>
+    <script th:src="@{/assets/js/auth.js}"></script>
+    <script th:src="@{/assets/js/main.js}"></script>
+    <script th:src="@{/assets/js/vendor/vue.global.prod.js}"></script>
+    <script th:if="${pageScript != null}" type="module" th:src="@{|/assets/js/vue/${pageScript}|}"></script>
+</head>
+</html>
