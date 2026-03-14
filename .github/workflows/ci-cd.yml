@@ -78,56 +78,79 @@ jobs:
     environment:
       name: production
       url: https://mis.bialger.com
+    permissions:
+      contents: read
+      packages: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download deployment artifact
         uses: actions/download-artifact@v4
         with:
           name: deploy-bundle
           path: release
 
-      - name: Upload deployment bundle to server
+      - name: Set Docker image name
+        run: |
+          echo "MIS_IMAGE=ghcr.io/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]'):latest" >> $GITHUB_ENV
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        run: |
+          mkdir -p docker-context
+          cp Dockerfile docker-context/
+          cp release/app.jar docker-context/
+          docker build -t ${{ env.MIS_IMAGE }} docker-context
+          docker push ${{ env.MIS_IMAGE }}
+
+      - name: Upload docker-compose and stop script to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ env.HOST }}
           username: ${{ secrets.SERVER_LOGIN }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "release/*"
-          target: "/tmp/mis-release"
-          rm: true
+          source: "deploy/docker-compose.yml,deploy/stop-systemd-service.sh"
+          target: "/opt/mis"
           strip_components: 1
           overwrite: true
 
-      - name: Install and restart service on server
+      - name: Stop old systemd service, then run Docker Compose
         uses: appleboy/ssh-action@v1.2.0
         env:
           SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
           SERVER_LOGIN: ${{ secrets.SERVER_LOGIN }}
           APP_PORT: ${{ env.APP_PORT }}
+          MIS_IMAGE: ${{ env.MIS_IMAGE }}
         with:
           host: ${{ env.HOST }}
           username: ${{ secrets.SERVER_LOGIN }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          envs: SERVER_PASSWORD,SERVER_LOGIN,APP_PORT
+          envs: SERVER_PASSWORD,SERVER_LOGIN,APP_PORT,MIS_IMAGE
           script: |
             set -euo pipefail
+            cd /opt/mis
 
-            BUNDLE_DIR="/tmp/mis-release"
-            DEPLOY_SCRIPT="$BUNDLE_DIR/deploy.sh"
-            APP_JAR_PATH="$BUNDLE_DIR/app.jar"
-
-            if [ ! -f "$DEPLOY_SCRIPT" ] || [ ! -f "$APP_JAR_PATH" ]; then
-              echo "Deployment bundle files are missing in $BUNDLE_DIR"
-              ls -la "$BUNDLE_DIR" || true
-              exit 1
+            if [ -f ./stop-systemd-service.sh ]; then
+              chmod +x ./stop-systemd-service.sh
+              export SUDO_PASSWORD="$SERVER_PASSWORD"
+              export SERVICE_NAME="mis"
+              export APP_DIR="/opt/mis"
+              ./stop-systemd-service.sh || true
             fi
 
-            chmod +x "$DEPLOY_SCRIPT"
-            export ARTIFACT_JAR="$APP_JAR_PATH"
-            export APP_NAME="mis"
-            export SERVICE_NAME="mis"
-            export APP_USER="$SERVER_LOGIN"
-            export APP_DIR="/opt/mis"
             export APP_PORT="${APP_PORT}"
-            export SUDO_PASSWORD="$SERVER_PASSWORD"
-            "$DEPLOY_SCRIPT"
+            docker compose -f docker-compose.yml down --remove-orphans || true
+            docker compose -f docker-compose.yml pull
+            docker compose -f docker-compose.yml up -d
+
+            echo "Waiting for container to be ready..."
+            sleep 5
+            docker compose -f docker-compose.yml ps
