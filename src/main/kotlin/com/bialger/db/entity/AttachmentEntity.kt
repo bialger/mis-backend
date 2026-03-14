@@ -1,7 +1,11 @@
 package com.bialger.db.entity
 
+import com.bialger.db.converter.FileTypeConverter
+import com.bialger.db.enums.FileType
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.model.DataType
 import java.time.Instant
 import java.util.UUID
 
@@ -12,7 +16,8 @@ data class AttachmentEntity(
     val appointmentId: UUID? = null,
     val medicalRecordId: UUID? = null,
     val fileName: String,
-    val fileType: String,           // PDF, IMAGE, TEXT
+    @field:TypeDef(type = DataType.OBJECT, converter = FileTypeConverter::class)
+    val fileType: FileType,
     val filePath: String,
     val fileSize: Long? = null,
     val description: String? = null,

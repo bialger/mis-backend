@@ -1,7 +1,13 @@
 package com.bialger.db.entity
 
+import com.bialger.db.converter.AppointmentSourceConverter
+import com.bialger.db.converter.AppointmentStatusConverter
+import com.bialger.db.enums.AppointmentSource
+import com.bialger.db.enums.AppointmentStatus
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.model.DataType
 import java.time.Instant
 import java.util.UUID
 
@@ -13,8 +19,10 @@ data class AppointmentEntity(
     val timeSlotId: UUID? = null,
     val branchId: UUID,
     val roomId: UUID,
-    val status: String,  // appointment_status enum
-    val source: String,  // appointment_source enum
+    @field:TypeDef(type = DataType.OBJECT, converter = AppointmentStatusConverter::class)
+    val status: AppointmentStatus,
+    @field:TypeDef(type = DataType.OBJECT, converter = AppointmentSourceConverter::class)
+    val source: AppointmentSource,
     val notes: String? = null,
     val createdBy: UUID? = null,
     val createdAt: Instant? = null,

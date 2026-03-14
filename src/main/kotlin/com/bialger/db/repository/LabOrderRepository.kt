@@ -1,6 +1,7 @@
 package com.bialger.db.repository
 
 import com.bialger.db.entity.LabOrderEntity
+import com.bialger.db.enums.LabOrderStatus
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.CrudRepository
@@ -13,5 +14,5 @@ interface LabOrderRepository : CrudRepository<LabOrderEntity, UUID> {
 
     fun findByPatientId(patientId: UUID): List<LabOrderEntity>
 
-    fun findByStatus(status: String): List<LabOrderEntity>
+    fun findByStatus(status: LabOrderStatus): List<LabOrderEntity>
 }

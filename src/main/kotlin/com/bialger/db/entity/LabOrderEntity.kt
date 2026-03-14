@@ -1,7 +1,11 @@
 package com.bialger.db.entity
 
+import com.bialger.db.converter.LabOrderStatusConverter
+import com.bialger.db.enums.LabOrderStatus
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.model.DataType
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
@@ -13,6 +17,7 @@ data class LabOrderEntity(
     val patientId: UUID,
     val employeeId: UUID,
     val totalPrice: BigDecimal? = null,
-    val status: String,
+    @field:TypeDef(type = DataType.OBJECT, converter = LabOrderStatusConverter::class)
+    val status: LabOrderStatus,
     val createdAt: Instant? = null
 )
