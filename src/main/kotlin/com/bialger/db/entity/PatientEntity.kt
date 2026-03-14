@@ -1,7 +1,13 @@
 package com.bialger.db.entity
 
+import com.bialger.db.converter.GenderTypeConverter
+import com.bialger.db.converter.LocalityTypeConverter
+import com.bialger.db.enums.GenderType
+import com.bialger.db.enums.LocalityType
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.model.DataType
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -12,13 +18,15 @@ data class PatientEntity(
     val cardNumber: String,
     val organizationId: UUID,
     val fullName: String,
-    val gender: String? = null,        // M, F - PostgreSQL enum
+    @field:TypeDef(type = DataType.OBJECT, converter = GenderTypeConverter::class)
+    val gender: GenderType? = null,
     val birthDate: LocalDate? = null,
     val registrationAddress: String? = null,
     val residenceAddress: String? = null,
     val phone: String? = null,
     val email: String? = null,
-    val localityType: String? = null,  // URBAN, RURAL - PostgreSQL enum
+    @field:TypeDef(type = DataType.OBJECT, converter = LocalityTypeConverter::class)
+    val localityType: LocalityType? = null,
     val citizenship: String? = null,
     val identityDocument: String? = null,
     val omsPolicy: String? = null,

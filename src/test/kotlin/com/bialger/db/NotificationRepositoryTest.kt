@@ -3,6 +3,9 @@ package com.bialger.db
 import com.bialger.db.entity.NotificationEntity
 import com.bialger.db.entity.OrganizationEntity
 import com.bialger.db.entity.PatientEntity
+import com.bialger.db.enums.NotificationChannel
+import com.bialger.db.enums.NotificationStatus
+import com.bialger.db.enums.NotificationType
 import com.bialger.db.repository.NotificationRepository
 import com.bialger.db.repository.OrganizationRepository
 import com.bialger.db.repository.PatientRepository
@@ -36,17 +39,17 @@ class NotificationRepositoryTest(
         val entity = NotificationEntity(
             id = UUID.randomUUID(),
             patientId = patientId,
-            channel = "SMS",
-            type = "APPOINTMENT_CONFIRMATION",
-            status = "PENDING",
+            channel = NotificationChannel.SMS,
+            type = NotificationType.APPOINTMENT_CONFIRMATION,
+            status = NotificationStatus.PENDING,
             content = "Напоминание о визите"
         )
         notificationRepository.save(entity)
 
         val found = notificationRepository.findById(entity.id).orElse(null)
         found.shouldNotBeNull()
-        found.channel shouldBe "SMS"
-        found.status shouldBe "PENDING"
+        found.channel shouldBe NotificationChannel.SMS
+        found.status shouldBe NotificationStatus.PENDING
     }
 
     "findByPatientId" {
@@ -61,18 +64,18 @@ class NotificationRepositoryTest(
             NotificationEntity(
                 id = UUID.randomUUID(),
                 patientId = patientId,
-                channel = "EMAIL",
-                type = "VISIT_REMINDER",
-                status = "SENT"
+                channel = NotificationChannel.EMAIL,
+                type = NotificationType.VISIT_REMINDER,
+                status = NotificationStatus.SENT
             )
         )
         notificationRepository.save(
             NotificationEntity(
                 id = UUID.randomUUID(),
                 patientId = patientId,
-                channel = "SMS",
-                type = "MARKETING",
-                status = "PENDING"
+                channel = NotificationChannel.SMS,
+                type = NotificationType.MARKETING,
+                status = NotificationStatus.PENDING
             )
         )
 
@@ -92,14 +95,14 @@ class NotificationRepositoryTest(
             NotificationEntity(
                 id = UUID.randomUUID(),
                 patientId = patientId,
-                channel = "SMS",
-                type = "APPOINTMENT_CONFIRMATION",
-                status = "FAILED"
+                channel = NotificationChannel.SMS,
+                type = NotificationType.APPOINTMENT_CONFIRMATION,
+                status = NotificationStatus.FAILED
             )
         )
 
-        val failed = notificationRepository.findByStatus("FAILED")
+        val failed = notificationRepository.findByStatus(NotificationStatus.FAILED)
         failed shouldHaveSize 1
-        failed.first().status shouldBe "FAILED"
+        failed.first().status shouldBe NotificationStatus.FAILED
     }
 })

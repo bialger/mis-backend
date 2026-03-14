@@ -19,6 +19,8 @@ services:
     image: postgres:17
     container_name: mis-postgres
     restart: unless-stopped
+    ports:
+      - "1432:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}

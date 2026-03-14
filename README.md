@@ -1,9 +1,10 @@
 # M3301-Bigulov-backend
 Backend for Medical Information System powered by Kotlin and Micronaut
 
-## ERD (модель данных)
+## ERD (Data Model)
 
-![ERD модели данных](./mis_erd.svg)
+![ERD data model](./mis_erd.svg)
+
 
 
 ## Deployment (Docker)
@@ -21,13 +22,29 @@ cd /opt/mis
 docker compose exec postgres psql -U mis -d mis -c "SELECT 1"
 ```
 
-If the command returns a row with `1`, the connection with that user and database works (an wrong password would have caused an error when entering the container).
+If the command returns a row with `1`, the connection with that user and database works (a wrong password would have caused an error when entering the container).
 
 To check user and database explicitly:
 
 ```bash
 PGPASSWORD='your_password_from_.env' docker compose exec -T postgres psql -U mis -d mis -h localhost -c "SELECT current_user, current_database();"
 ```
+
+### Local run (Docker + local image)
+
+Run Postgres and the app from a locally built image (no pull from GHCR):
+
+1. **Start Docker Desktop** (required).
+2. From the project root, run:
+   ```bash
+   bash deploy/run-local.sh
+   ```
+   The script: builds JAR → builds image `mis-backend:local` → creates `deploy/.env` with `MIS_IMAGE=mis-backend:local` → runs `docker compose up -d`.
+
+   App: http://localhost:8000  
+   Postgres: localhost:5432 (user=`mis`, password=`mis`, db=`mis`).
+
+3. To stop: `cd deploy && docker compose down`.
 
 ---
 

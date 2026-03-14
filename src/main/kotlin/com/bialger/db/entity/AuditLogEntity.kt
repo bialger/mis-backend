@@ -1,7 +1,10 @@
 package com.bialger.db.entity
 
+import com.bialger.db.converter.JsonbConverter
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.model.DataType
 import java.time.Instant
 import java.util.UUID
 
@@ -12,8 +15,10 @@ data class AuditLogEntity(
     val action: String,
     val entityType: String,
     val entityId: UUID? = null,
-    val oldValue: String? = null,   // JSONB as String
-    val newValue: String? = null,   // JSONB as String
+    @field:TypeDef(type = DataType.OBJECT, converter = JsonbConverter::class)
+    val oldValue: String? = null,
+    @field:TypeDef(type = DataType.OBJECT, converter = JsonbConverter::class)
+    val newValue: String? = null,
     val ipAddress: String? = null,
     val timestamp: Instant
 )

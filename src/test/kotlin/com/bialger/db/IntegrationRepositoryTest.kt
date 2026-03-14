@@ -1,6 +1,7 @@
 package com.bialger.db
 
 import com.bialger.db.entity.IntegrationEntity
+import com.bialger.db.enums.IntegrationType
 import com.bialger.db.repository.IntegrationRepository
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import io.kotest.matchers.collections.shouldHaveSize
@@ -18,7 +19,7 @@ class IntegrationRepositoryTest(
     "save and findById" {
         val entity = IntegrationEntity(
             id = UUID.randomUUID(),
-            type = "SMS_PROVIDER",
+            type = IntegrationType.SMS_PROVIDER,
             name = "SMS.ru",
             config = """{"api_key":"secret"}""",
             isActive = true
@@ -28,25 +29,25 @@ class IntegrationRepositoryTest(
         val found = repository.findById(entity.id).orElse(null)
         found.shouldNotBeNull()
         found.name shouldBe "SMS.ru"
-        found.type shouldBe "SMS_PROVIDER"
+        found.type shouldBe IntegrationType.SMS_PROVIDER
     }
 
     "findByType" {
         val id1 = UUID.randomUUID()
         val id2 = UUID.randomUUID()
-        repository.save(IntegrationEntity(id = id1, type = "LABORATORY", name = "Лаб 1", isActive = true))
-        repository.save(IntegrationEntity(id = id2, type = "LABORATORY", name = "Лаб 2", isActive = true))
-        repository.save(IntegrationEntity(id = UUID.randomUUID(), type = "SMS_PROVIDER", name = "SMS", isActive = true))
+        repository.save(IntegrationEntity(id = id1, type = IntegrationType.LABORATORY, name = "Лаб 1", isActive = true))
+        repository.save(IntegrationEntity(id = id2, type = IntegrationType.LABORATORY, name = "Лаб 2", isActive = true))
+        repository.save(IntegrationEntity(id = UUID.randomUUID(), type = IntegrationType.SMS_PROVIDER, name = "SMS", isActive = true))
 
-        val labIntegrations = repository.findByType("LABORATORY")
+        val labIntegrations = repository.findByType(IntegrationType.LABORATORY)
         labIntegrations shouldHaveSize 2
         labIntegrations.map { it.name }.toSet() shouldBe setOf("Лаб 1", "Лаб 2")
     }
 
     "findByIsActive" {
         val id = UUID.randomUUID()
-        repository.save(IntegrationEntity(id = id, type = "GOV_SYSTEM", name = "ГИС", isActive = false))
-        repository.save(IntegrationEntity(id = UUID.randomUUID(), type = "SMS_PROVIDER", name = "SMS", isActive = true))
+        repository.save(IntegrationEntity(id = id, type = IntegrationType.GOV_SYSTEM, name = "ГИС", isActive = false))
+        repository.save(IntegrationEntity(id = UUID.randomUUID(), type = IntegrationType.SMS_PROVIDER, name = "SMS", isActive = true))
 
         val active = repository.findByIsActive(true)
         active shouldHaveSize 1
@@ -59,8 +60,8 @@ class IntegrationRepositoryTest(
 
     "update and delete" {
         val id = UUID.randomUUID()
-        repository.save(IntegrationEntity(id = id, type = "LAB", name = "Old", isActive = true))
-        repository.update(IntegrationEntity(id = id, type = "LAB", name = "New", isActive = false))
+        repository.save(IntegrationEntity(id = id, type = IntegrationType.LABORATORY, name = "Old", isActive = true))
+        repository.update(IntegrationEntity(id = id, type = IntegrationType.LABORATORY, name = "New", isActive = false))
 
         val found = requireNotNull(repository.findById(id).orElse(null))
         found.name shouldBe "New"
