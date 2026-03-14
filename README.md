@@ -1,6 +1,11 @@
 # M3301-Bigulov-backend
 Backend for Medical Information System powered by Kotlin and Micronaut
 
+## ERD (модель данных)
+
+![ERD модели данных](./mis_erd.svg)
+
+
 ## Deployment (Docker)
 
 The server must have an **`.env`** file in the same directory as `docker-compose.yml`. Docker Compose loads `.env` from the project directory when you run it.
