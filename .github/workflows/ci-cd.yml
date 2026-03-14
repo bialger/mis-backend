@@ -38,6 +38,7 @@ jobs:
           --health-retries 10
 
     env:
+      MICRONAUT_ENVIRONMENTS: test
       MICRONAUT_DATASOURCES_DEFAULT_URL: jdbc:postgresql://localhost:5432/mis
       MICRONAUT_DATASOURCES_DEFAULT_USERNAME: mis
       MICRONAUT_DATASOURCES_DEFAULT_PASSWORD: mis
