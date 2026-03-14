@@ -37,3 +37,7 @@ build/
 # Gradle wrapper must be versioned
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
+
+# Local secrets and environment variables
+.env
+deploy/.env

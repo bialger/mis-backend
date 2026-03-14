@@ -111,18 +111,18 @@ jobs:
           docker build -t ${{ env.MIS_IMAGE }} docker-context
           docker push ${{ env.MIS_IMAGE }}
 
-      - name: Upload docker-compose and stop script to server
+      - name: Upload docker-compose to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ env.HOST }}
           username: ${{ secrets.SERVER_LOGIN }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "deploy/docker-compose.yml,deploy/stop-systemd-service.sh"
+          source: "deploy/docker-compose.yml"
           target: "/opt/mis"
           strip_components: 1
           overwrite: true
 
-      - name: Stop old systemd service, then run Docker Compose
+      - name: Run Docker Compose on server
         uses: appleboy/ssh-action@v1.2.0
         env:
           SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
@@ -139,14 +139,6 @@ jobs:
           script: |
             set -euo pipefail
             cd /opt/mis
-
-            if [ -f ./stop-systemd-service.sh ]; then
-              chmod +x ./stop-systemd-service.sh
-              export SUDO_PASSWORD="$SERVER_PASSWORD"
-              export SERVICE_NAME="mis"
-              export APP_DIR="/opt/mis"
-              ./stop-systemd-service.sh || true
-            fi
 
             if [ -n "${GHCR_PULL_TOKEN:-}" ]; then
               echo "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
