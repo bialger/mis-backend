@@ -22,6 +22,26 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: mis
+          POSTGRES_PASSWORD: mis
+          POSTGRES_DB: mis
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mis -d mis"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MICRONAUT_DATASOURCES_DEFAULT_URL: jdbc:postgresql://localhost:5432/mis
+      MICRONAUT_DATASOURCES_DEFAULT_USERNAME: mis
+      MICRONAUT_DATASOURCES_DEFAULT_PASSWORD: mis
+
     steps:
       - name: Checkout repository (with frontend submodule)
         uses: actions/checkout@v4
