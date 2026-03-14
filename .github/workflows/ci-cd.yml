@@ -129,11 +129,13 @@ jobs:
           SERVER_LOGIN: ${{ secrets.SERVER_LOGIN }}
           APP_PORT: ${{ env.APP_PORT }}
           MIS_IMAGE: ${{ env.MIS_IMAGE }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          GHCR_USERNAME: ${{ github.repository_owner }}
         with:
           host: ${{ env.HOST }}
           username: ${{ secrets.SERVER_LOGIN }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          envs: SERVER_PASSWORD,SERVER_LOGIN,APP_PORT,MIS_IMAGE
+          envs: SERVER_PASSWORD,SERVER_LOGIN,APP_PORT,MIS_IMAGE,GHCR_PULL_TOKEN,GHCR_USERNAME
           script: |
             set -euo pipefail
             cd /opt/mis
@@ -144,6 +146,10 @@ jobs:
               export SERVICE_NAME="mis"
               export APP_DIR="/opt/mis"
               ./stop-systemd-service.sh || true
+            fi
+
+            if [ -n "${GHCR_PULL_TOKEN:-}" ]; then
+              echo "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
             fi
 
             export APP_PORT="${APP_PORT}"
