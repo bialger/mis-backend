@@ -141,6 +141,15 @@ class PrescriptionTypeConverter : AttributeConverter<PrescriptionType, Any> {
         fromPgObject(persistedValue)?.let { PrescriptionType.valueOf(it) }
 }
 
+@Singleton
+class LabResultSourceConverter : AttributeConverter<LabResultSource, Any> {
+    override fun convertToPersistedValue(entityValue: LabResultSource?, context: ConversionContext): Any? =
+        toPgObject(entityValue?.name, "lab_result_source")
+
+    override fun convertToEntityValue(persistedValue: Any?, context: ConversionContext): LabResultSource? =
+        fromPgObject(persistedValue)?.let { LabResultSource.valueOf(it) }
+}
+
 private fun toPgObject(value: String?, pgType: String): Any? {
     if (value == null) return null
     return PGobject().apply {

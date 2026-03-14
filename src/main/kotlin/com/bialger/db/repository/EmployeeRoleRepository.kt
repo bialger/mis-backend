@@ -1,23 +1,73 @@
 package com.bialger.db.repository
 
 import com.bialger.db.entity.EmployeeRoleEntity
-import io.micronaut.data.annotation.Query
-import io.micronaut.data.jdbc.annotation.JdbcRepository
-import io.micronaut.data.model.query.builder.sql.Dialect
+import jakarta.inject.Singleton
+import java.sql.ResultSet
 import java.util.UUID
+import javax.sql.DataSource
 
-@JdbcRepository(dialect = Dialect.POSTGRES)
 interface EmployeeRoleRepository {
 
-    @Query("SELECT employee_id, role_id FROM employee_role WHERE employee_id = :employeeId")
     fun findByEmployeeId(employeeId: UUID): List<EmployeeRoleEntity>
 
-    @Query("SELECT employee_id, role_id FROM employee_role WHERE role_id = :roleId")
     fun findByRoleId(roleId: UUID): List<EmployeeRoleEntity>
 
-    @Query("INSERT INTO employee_role (employee_id, role_id) VALUES (:employeeId, :roleId)")
     fun save(employeeId: UUID, roleId: UUID)
 
-    @Query("DELETE FROM employee_role WHERE employee_id = :employeeId AND role_id = :roleId")
     fun deleteByEmployeeIdAndRoleId(employeeId: UUID, roleId: UUID)
+}
+
+@Singleton
+class EmployeeRoleRepositoryImpl(
+    private val dataSource: DataSource
+) : EmployeeRoleRepository {
+
+    override fun findByEmployeeId(employeeId: UUID): List<EmployeeRoleEntity> =
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("SELECT employee_id, role_id FROM employee_role WHERE employee_id = ?").use { ps ->
+                ps.setObject(1, employeeId)
+                ps.executeQuery().use { rs -> mapResultSet(rs) }
+            }
+        }
+
+    override fun findByRoleId(roleId: UUID): List<EmployeeRoleEntity> =
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("SELECT employee_id, role_id FROM employee_role WHERE role_id = ?").use { ps ->
+                ps.setObject(1, roleId)
+                ps.executeQuery().use { rs -> mapResultSet(rs) }
+            }
+        }
+
+    override fun save(employeeId: UUID, roleId: UUID) {
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("INSERT INTO employee_role (employee_id, role_id) VALUES (?, ?)").use { ps ->
+                ps.setObject(1, employeeId)
+                ps.setObject(2, roleId)
+                ps.executeUpdate()
+            }
+        }
+    }
+
+    override fun deleteByEmployeeIdAndRoleId(employeeId: UUID, roleId: UUID) {
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("DELETE FROM employee_role WHERE employee_id = ? AND role_id = ?").use { ps ->
+                ps.setObject(1, employeeId)
+                ps.setObject(2, roleId)
+                ps.executeUpdate()
+            }
+        }
+    }
+
+    private fun mapResultSet(rs: ResultSet): List<EmployeeRoleEntity> {
+        val result = mutableListOf<EmployeeRoleEntity>()
+        while (rs.next()) {
+            result.add(
+                EmployeeRoleEntity(
+                    employeeId = rs.getObject("employee_id", UUID::class.java),
+                    roleId = rs.getObject("role_id", UUID::class.java)
+                )
+            )
+        }
+        return result
+    }
 }

@@ -1,23 +1,73 @@
 package com.bialger.db.repository
 
 import com.bialger.db.entity.RolePermissionEntity
-import io.micronaut.data.annotation.Query
-import io.micronaut.data.jdbc.annotation.JdbcRepository
-import io.micronaut.data.model.query.builder.sql.Dialect
+import jakarta.inject.Singleton
+import java.sql.ResultSet
 import java.util.UUID
+import javax.sql.DataSource
 
-@JdbcRepository(dialect = Dialect.POSTGRES)
 interface RolePermissionRepository {
 
-    @Query("SELECT role_id, permission_id FROM role_permission WHERE role_id = :roleId")
     fun findByRoleId(roleId: UUID): List<RolePermissionEntity>
 
-    @Query("SELECT role_id, permission_id FROM role_permission WHERE permission_id = :permissionId")
     fun findByPermissionId(permissionId: UUID): List<RolePermissionEntity>
 
-    @Query("INSERT INTO role_permission (role_id, permission_id) VALUES (:roleId, :permissionId)")
     fun save(roleId: UUID, permissionId: UUID)
 
-    @Query("DELETE FROM role_permission WHERE role_id = :roleId AND permission_id = :permissionId")
     fun deleteByRoleIdAndPermissionId(roleId: UUID, permissionId: UUID)
+}
+
+@Singleton
+class RolePermissionRepositoryImpl(
+    private val dataSource: DataSource
+) : RolePermissionRepository {
+
+    override fun findByRoleId(roleId: UUID): List<RolePermissionEntity> =
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("SELECT role_id, permission_id FROM role_permission WHERE role_id = ?").use { ps ->
+                ps.setObject(1, roleId)
+                ps.executeQuery().use { rs -> mapResultSet(rs) }
+            }
+        }
+
+    override fun findByPermissionId(permissionId: UUID): List<RolePermissionEntity> =
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("SELECT role_id, permission_id FROM role_permission WHERE permission_id = ?").use { ps ->
+                ps.setObject(1, permissionId)
+                ps.executeQuery().use { rs -> mapResultSet(rs) }
+            }
+        }
+
+    override fun save(roleId: UUID, permissionId: UUID) {
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("INSERT INTO role_permission (role_id, permission_id) VALUES (?, ?)").use { ps ->
+                ps.setObject(1, roleId)
+                ps.setObject(2, permissionId)
+                ps.executeUpdate()
+            }
+        }
+    }
+
+    override fun deleteByRoleIdAndPermissionId(roleId: UUID, permissionId: UUID) {
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("DELETE FROM role_permission WHERE role_id = ? AND permission_id = ?").use { ps ->
+                ps.setObject(1, roleId)
+                ps.setObject(2, permissionId)
+                ps.executeUpdate()
+            }
+        }
+    }
+
+    private fun mapResultSet(rs: ResultSet): List<RolePermissionEntity> {
+        val result = mutableListOf<RolePermissionEntity>()
+        while (rs.next()) {
+            result.add(
+                RolePermissionEntity(
+                    roleId = rs.getObject("role_id", UUID::class.java),
+                    permissionId = rs.getObject("permission_id", UUID::class.java)
+                )
+            )
+        }
+        return result
+    }
 }
