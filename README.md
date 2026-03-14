@@ -6,7 +6,7 @@ Backend for Medical Information System powered by Kotlin and Micronaut
 The server must have an **`.env`** file in the same directory as `docker-compose.yml`. Docker Compose loads `.env` from the project directory when you run it.
 
 **Where to put .env on the server:**  
-Create **`/opt/mis/.env`** (next to `docker-compose.yml`). See `deploy/.env.example` for a template.
+Create **`/opt/mis/.env`** (next to `docker-compose.yml`). See `deploy/.env.example` for a template. The file must include **`MIS_IMAGE`** and **`APP_PORT`** (e.g. `MIS_IMAGE=ghcr.io/is-web-y27/m3301-bigulov-backend:latest`) so that `docker compose` commands work when run manually; CI sets these when deploying.
 
 **Verify Postgres login and password on the server:**
 
