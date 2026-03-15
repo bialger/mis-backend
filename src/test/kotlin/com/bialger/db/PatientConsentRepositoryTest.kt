@@ -1,12 +1,12 @@
 package com.bialger.db
 
-import com.bialger.db.enums.ConsentType
-import com.bialger.db.entity.OrganizationEntity
-import com.bialger.db.entity.PatientConsentEntity
-import com.bialger.db.entity.PatientEntity
-import com.bialger.db.repository.OrganizationRepository
-import com.bialger.db.repository.PatientConsentRepository
-import com.bialger.db.repository.PatientRepository
+import com.bialger.domain.patient.enums.ConsentType
+import com.bialger.domain.core.entity.OrganizationEntity
+import com.bialger.domain.patient.entity.PatientConsentEntity
+import com.bialger.domain.patient.entity.PatientEntity
+import com.bialger.domain.core.repository.OrganizationRepository
+import com.bialger.domain.patient.repository.PatientConsentRepository
+import com.bialger.domain.patient.repository.PatientRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

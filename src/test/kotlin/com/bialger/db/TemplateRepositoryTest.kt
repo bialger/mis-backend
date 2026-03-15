@@ -1,12 +1,12 @@
 package com.bialger.db
 
-import com.bialger.db.entity.EmployeeEntity
-import com.bialger.db.entity.SpecialtyEntity
-import com.bialger.db.entity.TemplateEntity
-import com.bialger.db.enums.TemplateType
-import com.bialger.db.repository.EmployeeRepository
-import com.bialger.db.repository.SpecialtyRepository
-import com.bialger.db.repository.TemplateRepository
+import com.bialger.domain.core.entity.EmployeeEntity
+import com.bialger.domain.core.entity.SpecialtyEntity
+import com.bialger.domain.clinical.entity.TemplateEntity
+import com.bialger.domain.clinical.enums.TemplateType
+import com.bialger.domain.core.repository.EmployeeRepository
+import com.bialger.domain.core.repository.SpecialtyRepository
+import com.bialger.domain.clinical.repository.TemplateRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

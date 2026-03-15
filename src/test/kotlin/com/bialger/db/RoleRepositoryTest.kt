@@ -1,7 +1,7 @@
 package com.bialger.db
 
-import com.bialger.db.entity.RoleEntity
-import com.bialger.db.repository.RoleRepository
+import com.bialger.domain.core.entity.RoleEntity
+import com.bialger.domain.core.repository.RoleRepository
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

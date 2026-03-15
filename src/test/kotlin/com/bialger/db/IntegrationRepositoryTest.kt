@@ -1,8 +1,8 @@
 package com.bialger.db
 
-import com.bialger.db.entity.IntegrationEntity
-import com.bialger.db.enums.IntegrationType
-import com.bialger.db.repository.IntegrationRepository
+import com.bialger.domain.attachment.entity.IntegrationEntity
+import com.bialger.domain.attachment.enums.IntegrationType
+import com.bialger.domain.attachment.repository.IntegrationRepository
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull

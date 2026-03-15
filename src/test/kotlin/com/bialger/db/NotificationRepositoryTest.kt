@@ -1,14 +1,14 @@
 package com.bialger.db
 
-import com.bialger.db.entity.NotificationEntity
-import com.bialger.db.entity.OrganizationEntity
-import com.bialger.db.entity.PatientEntity
-import com.bialger.db.enums.NotificationChannel
-import com.bialger.db.enums.NotificationStatus
-import com.bialger.db.enums.NotificationType
-import com.bialger.db.repository.NotificationRepository
-import com.bialger.db.repository.OrganizationRepository
-import com.bialger.db.repository.PatientRepository
+import com.bialger.domain.attachment.entity.NotificationEntity
+import com.bialger.domain.core.entity.OrganizationEntity
+import com.bialger.domain.patient.entity.PatientEntity
+import com.bialger.domain.attachment.enums.NotificationChannel
+import com.bialger.domain.attachment.enums.NotificationStatus
+import com.bialger.domain.attachment.enums.NotificationType
+import com.bialger.domain.attachment.repository.NotificationRepository
+import com.bialger.domain.core.repository.OrganizationRepository
+import com.bialger.domain.patient.repository.PatientRepository
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull

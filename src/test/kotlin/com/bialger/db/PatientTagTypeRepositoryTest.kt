@@ -1,7 +1,7 @@
 package com.bialger.db
 
-import com.bialger.db.entity.PatientTagTypeEntity
-import com.bialger.db.repository.PatientTagTypeRepository
+import com.bialger.domain.patient.entity.PatientTagTypeEntity
+import com.bialger.domain.patient.repository.PatientTagTypeRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull

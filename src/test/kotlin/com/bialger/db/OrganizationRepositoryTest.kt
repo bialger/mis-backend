@@ -1,7 +1,7 @@
 package com.bialger.db
 
-import com.bialger.db.entity.OrganizationEntity
-import com.bialger.db.repository.OrganizationRepository
+import com.bialger.domain.core.entity.OrganizationEntity
+import com.bialger.domain.core.repository.OrganizationRepository
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldHaveSize

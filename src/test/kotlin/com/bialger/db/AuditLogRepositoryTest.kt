@@ -1,9 +1,9 @@
 package com.bialger.db
 
-import com.bialger.db.entity.AuditLogEntity
-import com.bialger.db.entity.EmployeeEntity
-import com.bialger.db.repository.AuditLogRepository
-import com.bialger.db.repository.EmployeeRepository
+import com.bialger.domain.system.entity.AuditLogEntity
+import com.bialger.domain.core.entity.EmployeeEntity
+import com.bialger.domain.system.repository.AuditLogRepository
+import com.bialger.domain.core.repository.EmployeeRepository
 import io.micronaut.data.model.Pageable
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import io.kotest.matchers.collections.shouldHaveSize

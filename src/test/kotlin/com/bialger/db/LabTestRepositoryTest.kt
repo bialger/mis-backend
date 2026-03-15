@@ -1,9 +1,9 @@
 package com.bialger.db
 
-import com.bialger.db.entity.LabTestEntity
-import com.bialger.db.entity.LaboratoryEntity
-import com.bialger.db.repository.LabTestRepository
-import com.bialger.db.repository.LaboratoryRepository
+import com.bialger.domain.laboratory.entity.LabTestEntity
+import com.bialger.domain.laboratory.entity.LaboratoryEntity
+import com.bialger.domain.laboratory.repository.LabTestRepository
+import com.bialger.domain.laboratory.repository.LaboratoryRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

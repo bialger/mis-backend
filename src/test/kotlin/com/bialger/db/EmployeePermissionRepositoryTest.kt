@@ -1,11 +1,11 @@
 package com.bialger.db
 
-import com.bialger.db.entity.EmployeeEntity
-import com.bialger.db.entity.EmployeePermissionEntity
-import com.bialger.db.entity.PermissionEntity
-import com.bialger.db.repository.EmployeePermissionRepository
-import com.bialger.db.repository.EmployeeRepository
-import com.bialger.db.repository.PermissionRepository
+import com.bialger.domain.core.entity.EmployeeEntity
+import com.bialger.domain.core.entity.EmployeePermissionEntity
+import com.bialger.domain.core.entity.PermissionEntity
+import com.bialger.domain.core.repository.EmployeePermissionRepository
+import com.bialger.domain.core.repository.EmployeeRepository
+import com.bialger.domain.core.repository.PermissionRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

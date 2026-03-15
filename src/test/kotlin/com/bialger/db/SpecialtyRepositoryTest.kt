@@ -1,7 +1,7 @@
 package com.bialger.db
 
-import com.bialger.db.entity.SpecialtyEntity
-import com.bialger.db.repository.SpecialtyRepository
+import com.bialger.domain.core.entity.SpecialtyEntity
+import com.bialger.domain.core.repository.SpecialtyRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

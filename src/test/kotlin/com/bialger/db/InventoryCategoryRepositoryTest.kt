@@ -1,7 +1,7 @@
 package com.bialger.db
 
-import com.bialger.db.entity.InventoryCategoryEntity
-import com.bialger.db.repository.InventoryCategoryRepository
+import com.bialger.domain.inventory.entity.InventoryCategoryEntity
+import com.bialger.domain.inventory.repository.InventoryCategoryRepository
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

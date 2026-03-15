@@ -1,13 +1,13 @@
 package com.bialger.db
 
-import com.bialger.db.entity.OrganizationEntity
-import com.bialger.db.entity.PatientEntity
-import com.bialger.db.entity.PatientTagEntity
-import com.bialger.db.entity.PatientTagTypeEntity
-import com.bialger.db.repository.OrganizationRepository
-import com.bialger.db.repository.PatientRepository
-import com.bialger.db.repository.PatientTagRepository
-import com.bialger.db.repository.PatientTagTypeRepository
+import com.bialger.domain.core.entity.OrganizationEntity
+import com.bialger.domain.patient.entity.PatientEntity
+import com.bialger.domain.patient.entity.PatientTagEntity
+import com.bialger.domain.patient.entity.PatientTagTypeEntity
+import com.bialger.domain.core.repository.OrganizationRepository
+import com.bialger.domain.patient.repository.PatientRepository
+import com.bialger.domain.patient.repository.PatientTagRepository
+import com.bialger.domain.patient.repository.PatientTagTypeRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

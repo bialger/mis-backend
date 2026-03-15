@@ -1,7 +1,7 @@
 package com.bialger.db
 
-import com.bialger.db.entity.LaboratoryEntity
-import com.bialger.db.repository.LaboratoryRepository
+import com.bialger.domain.laboratory.entity.LaboratoryEntity
+import com.bialger.domain.laboratory.repository.LaboratoryRepository
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.StringSpec

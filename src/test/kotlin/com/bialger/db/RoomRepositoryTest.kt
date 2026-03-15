@@ -1,11 +1,11 @@
 package com.bialger.db
 
-import com.bialger.db.entity.BranchEntity
-import com.bialger.db.entity.OrganizationEntity
-import com.bialger.db.entity.RoomEntity
-import com.bialger.db.repository.BranchRepository
-import com.bialger.db.repository.OrganizationRepository
-import com.bialger.db.repository.RoomRepository
+import com.bialger.domain.core.entity.BranchEntity
+import com.bialger.domain.core.entity.OrganizationEntity
+import com.bialger.domain.core.entity.RoomEntity
+import com.bialger.domain.core.repository.BranchRepository
+import com.bialger.domain.core.repository.OrganizationRepository
+import com.bialger.domain.core.repository.RoomRepository
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull

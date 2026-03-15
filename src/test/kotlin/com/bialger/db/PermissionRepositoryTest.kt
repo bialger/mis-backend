@@ -1,7 +1,7 @@
 package com.bialger.db
 
-import com.bialger.db.entity.PermissionEntity
-import com.bialger.db.repository.PermissionRepository
+import com.bialger.domain.core.entity.PermissionEntity
+import com.bialger.domain.core.repository.PermissionRepository
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

@@ -1,12 +1,12 @@
 package com.bialger.db
 
-import com.bialger.db.entity.BranchEntity
-import com.bialger.db.entity.EmployeeEntity
-import com.bialger.db.entity.OrganizationEntity
-import com.bialger.db.repository.BranchRepository
-import com.bialger.db.repository.EmployeeBranchRepository
-import com.bialger.db.repository.EmployeeRepository
-import com.bialger.db.repository.OrganizationRepository
+import com.bialger.domain.core.entity.BranchEntity
+import com.bialger.domain.core.entity.EmployeeEntity
+import com.bialger.domain.core.entity.OrganizationEntity
+import com.bialger.domain.core.repository.BranchRepository
+import com.bialger.domain.core.repository.EmployeeBranchRepository
+import com.bialger.domain.core.repository.EmployeeRepository
+import com.bialger.domain.core.repository.OrganizationRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.StringSpec

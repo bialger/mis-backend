@@ -1,10 +1,10 @@
 package com.bialger.db
 
-import com.bialger.db.entity.PermissionEntity
-import com.bialger.db.entity.RoleEntity
-import com.bialger.db.repository.PermissionRepository
-import com.bialger.db.repository.RolePermissionRepository
-import com.bialger.db.repository.RoleRepository
+import com.bialger.domain.core.entity.PermissionEntity
+import com.bialger.domain.core.entity.RoleEntity
+import com.bialger.domain.core.repository.PermissionRepository
+import com.bialger.domain.core.repository.RolePermissionRepository
+import com.bialger.domain.core.repository.RoleRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.StringSpec

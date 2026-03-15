@@ -1,6 +1,21 @@
 package com.bialger.db.converter
 
-import com.bialger.db.enums.*
+import com.bialger.domain.attachment.enums.FileType
+import com.bialger.domain.attachment.enums.IntegrationType
+import com.bialger.domain.attachment.enums.NotificationChannel
+import com.bialger.domain.attachment.enums.NotificationStatus
+import com.bialger.domain.attachment.enums.NotificationType
+import com.bialger.domain.clinical.enums.PrescriptionType
+import com.bialger.domain.clinical.enums.TemplateType
+import com.bialger.domain.finance.enums.PaymentMethodType
+import com.bialger.domain.finance.enums.PaymentStatusType
+import com.bialger.domain.laboratory.enums.LabOrderStatus
+import com.bialger.domain.laboratory.enums.LabResultSource
+import com.bialger.domain.patient.enums.ConsentType
+import com.bialger.domain.patient.enums.GenderType
+import com.bialger.domain.patient.enums.LocalityType
+import com.bialger.domain.scheduling.enums.AppointmentSource
+import com.bialger.domain.scheduling.enums.AppointmentStatus
 import io.micronaut.core.convert.ConversionContext
 import io.micronaut.data.model.runtime.convert.AttributeConverter
 import jakarta.inject.Singleton

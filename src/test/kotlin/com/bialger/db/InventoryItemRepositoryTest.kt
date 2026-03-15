@@ -1,13 +1,13 @@
 package com.bialger.db
 
-import com.bialger.db.entity.BranchEntity
-import com.bialger.db.entity.InventoryCategoryEntity
-import com.bialger.db.entity.InventoryItemEntity
-import com.bialger.db.entity.OrganizationEntity
-import com.bialger.db.repository.BranchRepository
-import com.bialger.db.repository.InventoryCategoryRepository
-import com.bialger.db.repository.InventoryItemRepository
-import com.bialger.db.repository.OrganizationRepository
+import com.bialger.domain.core.entity.BranchEntity
+import com.bialger.domain.inventory.entity.InventoryCategoryEntity
+import com.bialger.domain.inventory.entity.InventoryItemEntity
+import com.bialger.domain.core.entity.OrganizationEntity
+import com.bialger.domain.core.repository.BranchRepository
+import com.bialger.domain.inventory.repository.InventoryCategoryRepository
+import com.bialger.domain.inventory.repository.InventoryItemRepository
+import com.bialger.domain.core.repository.OrganizationRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

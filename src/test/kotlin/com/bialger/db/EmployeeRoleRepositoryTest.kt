@@ -1,10 +1,10 @@
 package com.bialger.db
 
-import com.bialger.db.entity.EmployeeEntity
-import com.bialger.db.entity.RoleEntity
-import com.bialger.db.repository.EmployeeRepository
-import com.bialger.db.repository.EmployeeRoleRepository
-import com.bialger.db.repository.RoleRepository
+import com.bialger.domain.core.entity.EmployeeEntity
+import com.bialger.domain.core.entity.RoleEntity
+import com.bialger.domain.core.repository.EmployeeRepository
+import com.bialger.domain.core.repository.EmployeeRoleRepository
+import com.bialger.domain.core.repository.RoleRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.StringSpec

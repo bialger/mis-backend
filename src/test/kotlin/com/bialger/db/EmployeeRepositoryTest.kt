@@ -1,7 +1,7 @@
 package com.bialger.db
 
-import com.bialger.db.entity.EmployeeEntity
-import com.bialger.db.repository.EmployeeRepository
+import com.bialger.domain.core.entity.EmployeeEntity
+import com.bialger.domain.core.repository.EmployeeRepository
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
