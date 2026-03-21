@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/assets :: head(${title}, ${pageScript})}"></head>
+<body class="public-page">
+<main class="l-main">
+    <div class="l-content-wrapper l-content-wrapper--single">
+        <div class="l-main-content" th:replace="~{${contentView} :: ${contentFragment}}"></div>
+    </div>
+</main>
+<div th:if="${showFooter}" th:replace="~{fragments/footer :: appFooter(${currentYear})}"></div>
+</body>
+</html>

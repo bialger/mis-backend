@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<main class="l-main" th:fragment="appContent(contentView, contentFragment, activePage, showSidebar, publicLayout)">
+    <div class="l-content-wrapper" th:classappend="${showSidebar} ? '' : ' l-content-wrapper--single'">
+        <div class="l-main-content" th:replace="~{${contentView} :: ${contentFragment}}"></div>
+        <div th:if="${showSidebar and !publicLayout}" th:replace="~{fragments/sidebar :: appSidebar(${activePage})}"></div>
+    </div>
+</main>
+</body>
+</html>

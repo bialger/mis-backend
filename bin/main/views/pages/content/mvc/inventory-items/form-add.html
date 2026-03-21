@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Позиция склада</h2>
+    <div th:if="${error != null}" class="m-error-message" th:text="${error}"></div>
+    <form class="m-card m-section" method="post" th:action="@{/mvc/inventory-items}" accept-charset="UTF-8">
+        <p><label>Категория<br>
+            <select name="categoryId" required style="width:100%;max-width:32rem">
+                <option value="">—</option>
+                <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"></option>
+            </select>
+        </label></p>
+        <p><label>Филиал<br>
+            <select name="branchId" required style="width:100%;max-width:32rem">
+                <option value="">—</option>
+                <option th:each="b : ${branches}" th:value="${b.id}" th:text="${b.name}"></option>
+            </select>
+        </label></p>
+        <p><label>Кабинет (необязательно)<br>
+            <select name="roomId" style="width:100%;max-width:32rem">
+                <option value="">—</option>
+                <option th:each="r : ${rooms}" th:value="${r.id}" th:text="${r.name}"></option>
+            </select>
+        </label></p>
+        <p><label>Наименование<br><input name="name" required style="width:100%;max-width:32rem"></label></p>
+        <p><label>Ед. изм.<br><input name="unit" placeholder="шт" style="width:100%;max-width:32rem"></label></p>
+        <p><label>Количество<br><input name="quantity" value="0" style="width:100%;max-width:32rem"></label></p>
+        <p><label>Мин. остаток<br><input name="minQuantity" placeholder="опционально" style="width:100%;max-width:32rem"></label></p>
+        <p><label>Себестоимость<br><input name="costPrice" placeholder="опционально" style="width:100%;max-width:32rem"></label></p>
+        <p>
+            <button type="submit" class="m-tab-button">Сохранить</button>
+            <a class="m-tab-button" th:href="@{/mvc/inventory-items}">Отмена</a>
+        </p>
+    </form>
+</section>
+</body>
+</html>

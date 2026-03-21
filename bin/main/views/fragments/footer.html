@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<footer class="l-footer" th:fragment="appFooter(currentYear)">
+    <div class="l-footer-container">
+        <div class="l-footer-info">
+            <h3>Системная информация</h3>
+            <address>
+                <p>Версия системы: <strong>1.0.0</strong></p>
+                <p>Последнее обновление: <strong>02.03.2026</strong></p>
+                <p>Техническая поддержка: <strong>support@medcrm.local</strong></p>
+                <p>Статус системы: <strong>Активна</strong></p>
+            </address>
+        </div>
+        <div class="l-footer-copyright">
+            <p>&copy; <span th:text="${currentYear}">2026</span> Bialger. Все права защищены.</p>
+        </div>
+    </div>
+</footer>
+</body>
+</html>
