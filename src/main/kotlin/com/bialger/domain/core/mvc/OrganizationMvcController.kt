@@ -55,7 +55,7 @@ class OrganizationMvcController(
     fun create(@Body form: OrganizationMvcForm): HttpResponse<Any> {
         return try {
             val e = organizationMvcService.create(form.name, form.codeOkpo, form.codeOkud, form.address)
-            HttpResponse.redirect(URI.create("/mvc/organizations/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/organizations/${e.id}"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -99,7 +99,7 @@ class OrganizationMvcController(
     fun update(@PathVariable id: UUID, @Body form: OrganizationMvcForm): HttpResponse<Any> {
         return try {
             organizationMvcService.update(id, form.name, form.codeOkpo, form.codeOkud, form.address)
-            HttpResponse.redirect(URI.create("/mvc/organizations/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/organizations/$id"))
         } catch (e: IllegalArgumentException) {
             val item = organizationMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -117,7 +117,7 @@ class OrganizationMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             organizationMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/organizations"))
+            HttpResponse.seeOther(URI.create("/mvc/organizations"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

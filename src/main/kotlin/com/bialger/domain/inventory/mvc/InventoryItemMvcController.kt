@@ -79,7 +79,7 @@ class InventoryItemMvcController(
                 InventoryItemMvcService.parseDecimalOpt(form.minQuantity),
                 InventoryItemMvcService.parseDecimalOpt(form.costPrice)
             )
-            HttpResponse.redirect(URI.create("/mvc/inventory-items/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/inventory-items/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -152,7 +152,7 @@ class InventoryItemMvcController(
                 InventoryItemMvcService.parseDecimalOpt(form.minQuantity),
                 InventoryItemMvcService.parseDecimalOpt(form.costPrice)
             )
-            HttpResponse.redirect(URI.create("/mvc/inventory-items/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/inventory-items/$id"))
         } catch (e: Exception) {
             val item = inventoryItemMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -176,7 +176,7 @@ class InventoryItemMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             inventoryItemMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/inventory-items"))
+            HttpResponse.seeOther(URI.create("/mvc/inventory-items"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

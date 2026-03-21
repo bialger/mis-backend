@@ -67,7 +67,7 @@ class BranchMvcController(
                 form.phone,
                 form.isActive.formCheckboxOn()
             )
-            HttpResponse.redirect(URI.create("/mvc/branches/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/branches/${e.id}"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -127,7 +127,7 @@ class BranchMvcController(
                 form.phone,
                 form.isActive.formCheckboxOn()
             )
-            HttpResponse.redirect(URI.create("/mvc/branches/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/branches/$id"))
         } catch (e: IllegalArgumentException) {
             val item = branchMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -149,7 +149,7 @@ class BranchMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             branchMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/branches"))
+            HttpResponse.seeOther(URI.create("/mvc/branches"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

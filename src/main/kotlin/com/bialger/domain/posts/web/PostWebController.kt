@@ -53,7 +53,7 @@ class PostWebController(
         return try {
             val post = postService.create(form)
             val id = post.id ?: return HttpResponse.serverError("Не удалось получить id поста")
-            HttpResponse.redirect(URI.create("/posts/$id"))
+            HttpResponse.seeOther(URI.create("/posts/$id"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -97,7 +97,7 @@ class PostWebController(
     fun update(@PathVariable id: Long, @Body form: PostUpdateForm): HttpResponse<Any> {
         return try {
             postService.update(id, form)
-            HttpResponse.redirect(URI.create("/posts/$id"))
+            HttpResponse.seeOther(URI.create("/posts/$id"))
         } catch (e: IllegalArgumentException) {
             val post = postService.getById(id)
             if (post == null) {
@@ -121,7 +121,7 @@ class PostWebController(
     fun delete(@PathVariable id: Long): HttpResponse<Any> {
         return try {
             postService.delete(id)
-            HttpResponse.redirect(URI.create("/posts"))
+            HttpResponse.seeOther(URI.create("/posts"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

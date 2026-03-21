@@ -60,7 +60,7 @@ class IntegrationMvcController(
             val t = IntegrationMvcService.parseType(form.type)
             val active = IntegrationMvcService.parseActive(form.isActive)
             val e = integrationMvcService.create(t, form.name, form.config, active)
-            HttpResponse.redirect(URI.create("/mvc/integrations/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/integrations/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -112,7 +112,7 @@ class IntegrationMvcController(
             val t = IntegrationMvcService.parseType(form.type)
             val active = IntegrationMvcService.parseActive(form.isActive)
             integrationMvcService.update(id, t, form.name, form.config, active)
-            HttpResponse.redirect(URI.create("/mvc/integrations/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/integrations/$id"))
         } catch (e: Exception) {
             val item = integrationMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -134,7 +134,7 @@ class IntegrationMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             integrationMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/integrations"))
+            HttpResponse.seeOther(URI.create("/mvc/integrations"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

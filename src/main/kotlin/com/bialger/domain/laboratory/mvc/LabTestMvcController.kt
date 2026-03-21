@@ -66,7 +66,7 @@ class LabTestMvcController(
                 labId,
                 LabTestMvcService.parseActive(form.isActive)
             )
-            HttpResponse.redirect(URI.create("/mvc/lab-tests/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/lab-tests/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -127,7 +127,7 @@ class LabTestMvcController(
                 labId,
                 LabTestMvcService.parseActive(form.isActive)
             )
-            HttpResponse.redirect(URI.create("/mvc/lab-tests/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/lab-tests/$id"))
         } catch (e: Exception) {
             val item = labTestMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -149,7 +149,7 @@ class LabTestMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             labTestMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/lab-tests"))
+            HttpResponse.seeOther(URI.create("/mvc/lab-tests"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

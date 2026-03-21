@@ -55,7 +55,7 @@ class SpecialtyMvcController(
     fun create(@Body form: SpecialtyMvcForm): HttpResponse<Any> {
         return try {
             val e = specialtyMvcService.create(form.name, form.description)
-            HttpResponse.redirect(URI.create("/mvc/specialties/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/specialties/${e.id}"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -99,7 +99,7 @@ class SpecialtyMvcController(
     fun update(@PathVariable id: UUID, @Body form: SpecialtyMvcForm): HttpResponse<Any> {
         return try {
             specialtyMvcService.update(id, form.name, form.description)
-            HttpResponse.redirect(URI.create("/mvc/specialties/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/specialties/$id"))
         } catch (e: IllegalArgumentException) {
             val item = specialtyMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -117,7 +117,7 @@ class SpecialtyMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             specialtyMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/specialties"))
+            HttpResponse.seeOther(URI.create("/mvc/specialties"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

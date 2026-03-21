@@ -22,14 +22,12 @@
                 const p = new URLSearchParams(new FormData(e.target));
                 fetch('/mvc/laboratories/' + id, {
                     method: 'PATCH',
-                    redirect: 'manual',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: p.toString()
                 }).then(function (r) {
                     var detailUrl = '/mvc/laboratories/' + id;
-                    var loc = r.headers.get('Location');
-                    if (r.status >= 300 && r.status < 400) {
-                        window.location.href = loc ? new URL(loc, window.location.origin).href : detailUrl;
+                    if (r.redirected) {
+                        window.location.href = detailUrl;
                         return;
                     }
                     window.location.reload();

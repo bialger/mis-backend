@@ -65,7 +65,7 @@ class SalaryRecordMvcController(
                 form.shiftsCount.trim().takeIf { it.isNotEmpty() }?.toIntOrNull(),
                 form.amount.trim().takeIf { it.isNotEmpty() }?.let { BigDecimal(it) }
             )
-            HttpResponse.redirect(URI.create("/mvc/salary-records/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/salary-records/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -118,7 +118,7 @@ class SalaryRecordMvcController(
                 form.shiftsCount.trim().takeIf { it.isNotEmpty() }?.toIntOrNull(),
                 form.amount.trim().takeIf { it.isNotEmpty() }?.let { BigDecimal(it) }
             )
-            HttpResponse.redirect(URI.create("/mvc/salary-records/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/salary-records/$id"))
         } catch (e: Exception) {
             val item = salaryRecordMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -136,7 +136,7 @@ class SalaryRecordMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             salaryRecordMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/salary-records"))
+            HttpResponse.seeOther(URI.create("/mvc/salary-records"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

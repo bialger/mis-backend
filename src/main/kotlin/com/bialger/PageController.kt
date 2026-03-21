@@ -141,7 +141,7 @@ class PageController {
             "patient-booking" -> "/patient-booking"
             else -> "/"
         }
-        return HttpResponse.redirect(URI.create(target))
+        return HttpResponse.seeOther(URI.create(target))
     }
 
     private fun frontendPage(

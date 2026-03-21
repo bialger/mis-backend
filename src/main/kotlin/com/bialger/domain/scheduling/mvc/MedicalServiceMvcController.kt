@@ -60,7 +60,7 @@ class MedicalServiceMvcController(
             val branch = form.branchId.parseUuidOrNull()
             val active = MedicalServiceMvcService.parseActiveFlag(form.isActive)
             val e = medicalServiceMvcService.create(form.name, price, cost, branch, active)
-            HttpResponse.redirect(URI.create("/mvc/medical-services/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/medical-services/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -108,7 +108,7 @@ class MedicalServiceMvcController(
             val branch = form.branchId.parseUuidOrNull()
             val active = MedicalServiceMvcService.parseActiveFlag(form.isActive)
             medicalServiceMvcService.update(id, form.name, price, cost, branch, active)
-            HttpResponse.redirect(URI.create("/mvc/medical-services/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/medical-services/$id"))
         } catch (e: Exception) {
             val item = medicalServiceMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -126,7 +126,7 @@ class MedicalServiceMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             medicalServiceMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/medical-services"))
+            HttpResponse.seeOther(URI.create("/mvc/medical-services"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

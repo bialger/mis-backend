@@ -55,7 +55,7 @@ class PermissionMvcController(
     fun create(@Body form: PermissionMvcForm): HttpResponse<Any> {
         return try {
             val e = permissionMvcService.create(form.code, form.name, form.description)
-            HttpResponse.redirect(URI.create("/mvc/permissions/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/permissions/${e.id}"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -99,7 +99,7 @@ class PermissionMvcController(
     fun update(@PathVariable id: UUID, @Body form: PermissionMvcForm): HttpResponse<Any> {
         return try {
             permissionMvcService.update(id, form.code, form.name, form.description)
-            HttpResponse.redirect(URI.create("/mvc/permissions/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/permissions/$id"))
         } catch (e: IllegalArgumentException) {
             val item = permissionMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -117,7 +117,7 @@ class PermissionMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             permissionMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/permissions"))
+            HttpResponse.seeOther(URI.create("/mvc/permissions"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

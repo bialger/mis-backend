@@ -78,7 +78,7 @@ class TimeSlotMvcController(
                 TimeSlotMvcService.parseLocalTime(form.endTime),
                 TimeSlotMvcService.parseIsAvailable(form.isAvailable)
             )
-            HttpResponse.redirect(URI.create("/mvc/time-slots/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/time-slots/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -150,7 +150,7 @@ class TimeSlotMvcController(
                 TimeSlotMvcService.parseLocalTime(form.endTime),
                 TimeSlotMvcService.parseIsAvailable(form.isAvailable)
             )
-            HttpResponse.redirect(URI.create("/mvc/time-slots/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/time-slots/$id"))
         } catch (e: Exception) {
             val slot = timeSlotMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -174,7 +174,7 @@ class TimeSlotMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             timeSlotMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/time-slots"))
+            HttpResponse.seeOther(URI.create("/mvc/time-slots"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

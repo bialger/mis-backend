@@ -65,7 +65,7 @@ class RoomMvcController(
                 form.description,
                 form.isActive.formCheckboxOn()
             )
-            HttpResponse.redirect(URI.create("/mvc/rooms/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/rooms/${e.id}"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -123,7 +123,7 @@ class RoomMvcController(
                 form.description,
                 form.isActive.formCheckboxOn()
             )
-            HttpResponse.redirect(URI.create("/mvc/rooms/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/rooms/$id"))
         } catch (e: IllegalArgumentException) {
             val item = roomMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -145,7 +145,7 @@ class RoomMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             roomMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/rooms"))
+            HttpResponse.seeOther(URI.create("/mvc/rooms"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

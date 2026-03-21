@@ -68,7 +68,7 @@ class PatientMvcController(
                 form.phone,
                 form.email
             )
-            HttpResponse.redirect(URI.create("/mvc/patients/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/patients/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -134,7 +134,7 @@ class PatientMvcController(
                 form.phone,
                 form.email
             )
-            HttpResponse.redirect(URI.create("/mvc/patients/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/patients/$id"))
         } catch (e: Exception) {
             val patient = patientMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -156,7 +156,7 @@ class PatientMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             patientMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/patients"))
+            HttpResponse.seeOther(URI.create("/mvc/patients"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

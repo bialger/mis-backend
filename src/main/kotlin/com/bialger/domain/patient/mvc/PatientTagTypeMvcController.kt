@@ -57,7 +57,7 @@ class PatientTagTypeMvcController(
         return try {
             val active = form.isActive.formCheckboxOn()
             val e = patientTagTypeMvcService.create(form.code, form.name, form.icon, form.description, active)
-            HttpResponse.redirect(URI.create("/mvc/patient-tag-types/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/patient-tag-types/${e.id}"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -102,7 +102,7 @@ class PatientTagTypeMvcController(
         return try {
             val active = form.isActive.formCheckboxOn()
             patientTagTypeMvcService.update(id, form.code, form.name, form.icon, form.description, active)
-            HttpResponse.redirect(URI.create("/mvc/patient-tag-types/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/patient-tag-types/$id"))
         } catch (e: IllegalArgumentException) {
             val item = patientTagTypeMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -120,7 +120,7 @@ class PatientTagTypeMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             patientTagTypeMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/patient-tag-types"))
+            HttpResponse.seeOther(URI.create("/mvc/patient-tag-types"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

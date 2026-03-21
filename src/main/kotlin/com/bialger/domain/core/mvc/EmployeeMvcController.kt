@@ -62,7 +62,7 @@ class EmployeeMvcController(
                 form.password,
                 form.isActive.formCheckboxOn()
             )
-            HttpResponse.redirect(URI.create("/mvc/employees/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/employees/${e.id}"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -113,7 +113,7 @@ class EmployeeMvcController(
                 form.password,
                 form.isActive.formCheckboxOn()
             )
-            HttpResponse.redirect(URI.create("/mvc/employees/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/employees/$id"))
         } catch (e: IllegalArgumentException) {
             val item = employeeMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -131,7 +131,7 @@ class EmployeeMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             employeeMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/employees"))
+            HttpResponse.seeOther(URI.create("/mvc/employees"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

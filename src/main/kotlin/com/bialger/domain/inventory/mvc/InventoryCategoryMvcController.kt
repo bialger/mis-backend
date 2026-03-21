@@ -55,7 +55,7 @@ class InventoryCategoryMvcController(
     fun create(@Body form: InventoryCategoryMvcForm): HttpResponse<Any> {
         return try {
             val e = inventoryCategoryMvcService.create(form.name, form.description)
-            HttpResponse.redirect(URI.create("/mvc/inventory-categories/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/inventory-categories/${e.id}"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -99,7 +99,7 @@ class InventoryCategoryMvcController(
     fun update(@PathVariable id: UUID, @Body form: InventoryCategoryMvcForm): HttpResponse<Any> {
         return try {
             inventoryCategoryMvcService.update(id, form.name, form.description)
-            HttpResponse.redirect(URI.create("/mvc/inventory-categories/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/inventory-categories/$id"))
         } catch (e: IllegalArgumentException) {
             val item = inventoryCategoryMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -117,7 +117,7 @@ class InventoryCategoryMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             inventoryCategoryMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/inventory-categories"))
+            HttpResponse.seeOther(URI.create("/mvc/inventory-categories"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

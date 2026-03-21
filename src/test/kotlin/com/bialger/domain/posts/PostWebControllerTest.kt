@@ -47,8 +47,8 @@ class PostWebControllerTest(
             request,
             String::class.java
         )
-        // Micronaut HttpResponse.redirect() uses 301 MOVED_PERMANENTLY (not 302 FOUND)
-        response.status shouldBe HttpStatus.MOVED_PERMANENTLY
+        // HttpResponse.seeOther() — 303 SEE_OTHER (GET follow-up after POST)
+        response.status shouldBe HttpStatus.SEE_OTHER
         val location = response.header("Location") ?: error("no Location")
         val id = location.substringAfterLast('/').toLong()
         val entity = postRepository.findById(id).orElse(null).shouldNotBeNull()

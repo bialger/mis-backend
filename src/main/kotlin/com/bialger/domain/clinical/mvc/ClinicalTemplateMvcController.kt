@@ -62,7 +62,7 @@ class ClinicalTemplateMvcController(
             val emp = form.employeeId.parseUuidOrNull()
             val active = ClinicalTemplateMvcService.parseActive(form.isActive)
             val e = clinicalTemplateMvcService.create(form.name, type, spec, emp, form.content, active)
-            HttpResponse.redirect(URI.create("/mvc/templates/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/templates/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -116,7 +116,7 @@ class ClinicalTemplateMvcController(
             val emp = form.employeeId.parseUuidOrNull()
             val active = ClinicalTemplateMvcService.parseActive(form.isActive)
             clinicalTemplateMvcService.update(id, form.name, type, spec, emp, form.content, active)
-            HttpResponse.redirect(URI.create("/mvc/templates/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/templates/$id"))
         } catch (e: Exception) {
             val item = clinicalTemplateMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -138,7 +138,7 @@ class ClinicalTemplateMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             clinicalTemplateMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/templates"))
+            HttpResponse.seeOther(URI.create("/mvc/templates"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

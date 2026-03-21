@@ -29,7 +29,7 @@ class MvcOrganizationCrudFlowTest(
         ).contentType(MediaType.APPLICATION_FORM_URLENCODED_TYPE)
 
         val response = client.toBlocking().exchange(request, String::class.java)
-        response.status shouldBe HttpStatus.MOVED_PERMANENTLY
+        response.status shouldBe HttpStatus.SEE_OTHER
         val location = response.header("Location").shouldNotBeNull()
         val id = UUID.fromString(location.substringAfterLast('/'))
 

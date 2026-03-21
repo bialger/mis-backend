@@ -56,7 +56,7 @@ class SystemSettingMvcController(
         return try {
             val branch = SystemSettingMvcService.parseBranchId(form.branchId)
             val e = systemSettingMvcService.create(branch, form.key, form.value, form.description)
-            HttpResponse.redirect(URI.create("/mvc/system-settings/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/system-settings/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -101,7 +101,7 @@ class SystemSettingMvcController(
         return try {
             val branch = SystemSettingMvcService.parseBranchId(form.branchId)
             systemSettingMvcService.update(id, branch, form.key, form.value, form.description)
-            HttpResponse.redirect(URI.create("/mvc/system-settings/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/system-settings/$id"))
         } catch (e: Exception) {
             val item = systemSettingMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -119,7 +119,7 @@ class SystemSettingMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             systemSettingMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/system-settings"))
+            HttpResponse.seeOther(URI.create("/mvc/system-settings"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

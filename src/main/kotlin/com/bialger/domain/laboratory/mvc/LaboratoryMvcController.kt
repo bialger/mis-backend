@@ -56,7 +56,7 @@ class LaboratoryMvcController(
         return try {
             val active = LaboratoryMvcService.parseActive(form.isActive)
             val e = laboratoryMvcService.create(form.name, form.integrationType, form.config, active)
-            HttpResponse.redirect(URI.create("/mvc/laboratories/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/laboratories/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -101,7 +101,7 @@ class LaboratoryMvcController(
         return try {
             val active = LaboratoryMvcService.parseActive(form.isActive)
             laboratoryMvcService.update(id, form.name, form.integrationType, form.config, active)
-            HttpResponse.redirect(URI.create("/mvc/laboratories/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/laboratories/$id"))
         } catch (e: Exception) {
             val item = laboratoryMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -119,7 +119,7 @@ class LaboratoryMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             laboratoryMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/laboratories"))
+            HttpResponse.seeOther(URI.create("/mvc/laboratories"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

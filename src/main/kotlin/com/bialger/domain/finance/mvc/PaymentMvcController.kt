@@ -79,7 +79,7 @@ class PaymentMvcController(
                 form.notes,
                 createdBy
             )
-            HttpResponse.redirect(URI.create("/mvc/payments/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/payments/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -151,7 +151,7 @@ class PaymentMvcController(
                 form.notes,
                 createdBy
             )
-            HttpResponse.redirect(URI.create("/mvc/payments/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/payments/$id"))
         } catch (e: Exception) {
             val p = paymentMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -176,7 +176,7 @@ class PaymentMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             paymentMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/payments"))
+            HttpResponse.seeOther(URI.create("/mvc/payments"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

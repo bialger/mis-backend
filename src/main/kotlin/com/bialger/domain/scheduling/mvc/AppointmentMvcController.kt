@@ -93,7 +93,7 @@ class AppointmentMvcController(
                 form.notes,
                 createdBy
             )
-            HttpResponse.redirect(URI.create("/mvc/appointments/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/appointments/${e.id}"))
         } catch (e: Exception) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -180,7 +180,7 @@ class AppointmentMvcController(
                 form.notes,
                 createdBy
             )
-            HttpResponse.redirect(URI.create("/mvc/appointments/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/appointments/$id"))
         } catch (e: Exception) {
             val a = appointmentMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -208,7 +208,7 @@ class AppointmentMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             appointmentMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/appointments"))
+            HttpResponse.seeOther(URI.create("/mvc/appointments"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }

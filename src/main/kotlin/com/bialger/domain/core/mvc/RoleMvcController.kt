@@ -55,7 +55,7 @@ class RoleMvcController(
     fun create(@Body form: RoleMvcForm): HttpResponse<Any> {
         return try {
             val e = roleMvcService.create(form.name, form.displayName, form.description)
-            HttpResponse.redirect(URI.create("/mvc/roles/${e.id}"))
+            HttpResponse.seeOther(URI.create("/mvc/roles/${e.id}"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.ok(
                 appPageModelFactory.appPage(
@@ -99,7 +99,7 @@ class RoleMvcController(
     fun update(@PathVariable id: UUID, @Body form: RoleMvcForm): HttpResponse<Any> {
         return try {
             roleMvcService.update(id, form.name, form.displayName, form.description)
-            HttpResponse.redirect(URI.create("/mvc/roles/$id"))
+            HttpResponse.seeOther(URI.create("/mvc/roles/$id"))
         } catch (e: IllegalArgumentException) {
             val item = roleMvcService.getById(id) ?: return HttpResponse.notFound()
             HttpResponse.ok(
@@ -117,7 +117,7 @@ class RoleMvcController(
     fun delete(@PathVariable id: UUID): HttpResponse<Any> {
         return try {
             roleMvcService.delete(id)
-            HttpResponse.redirect(URI.create("/mvc/roles"))
+            HttpResponse.seeOther(URI.create("/mvc/roles"))
         } catch (e: IllegalArgumentException) {
             HttpResponse.notFound()
         }
