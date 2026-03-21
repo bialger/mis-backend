@@ -10,8 +10,13 @@
             const eventName = /*[[${sseEventName}]]*/ '';
             if (!eventsUrl || !eventName) return;
             const notyf = new Notyf({ duration: 4500, position: { x: 'right', y: 'bottom' } });
-            const es = new EventSource(eventsUrl);
-            es.addEventListener(eventName, function (e) {
+            let lastData = '';
+            let lastAt = 0;
+            function showSseToast(e) {
+                const now = Date.now();
+                if (e.data === lastData && now - lastAt < 900) return;
+                lastData = e.data;
+                lastAt = now;
                 try {
                     const data = JSON.parse(e.data);
                     const verb = data.type === 'CREATED' ? 'Создано: ' : data.type === 'UPDATED' ? 'Обновлено: ' : 'Удалено: ';
@@ -19,7 +24,16 @@
                 } catch (_) {
                     notyf.open({ type: 'info', message: e.data });
                 }
+            }
+            const es = new EventSource(eventsUrl);
+            es.addEventListener('open', function () {
+                console.debug('[SSE] connected', eventsUrl, 'event:', eventName);
             });
+            es.addEventListener('error', function (err) {
+                console.error('[SSE] error', eventsUrl, err);
+            });
+            /* только именованное событие; слушатель "message" дублировал тост при некоторых клиентах */
+            es.addEventListener(eventName, showSseToast);
         })();
     </script>
 </th:block>

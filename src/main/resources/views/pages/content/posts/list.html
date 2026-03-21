@@ -24,8 +24,13 @@
     <script>
         (function () {
             const notyf = new Notyf({ duration: 4500, position: { x: 'right', y: 'bottom' } });
-            const es = new EventSource('/posts/events');
-            es.addEventListener('posts-change', function (e) {
+            let lastData = '';
+            let lastAt = 0;
+            function showPostToast(e) {
+                const now = Date.now();
+                if (e.data === lastData && now - lastAt < 900) return;
+                lastData = e.data;
+                lastAt = now;
                 try {
                     const data = JSON.parse(e.data);
                     const verb = data.type === 'CREATED' ? 'Создан: ' : data.type === 'UPDATED' ? 'Обновлён: ' : 'Удалён: ';
@@ -33,7 +38,15 @@
                 } catch (_) {
                     notyf.open({ type: 'info', message: e.data });
                 }
+            }
+            const es = new EventSource('/posts/events');
+            es.addEventListener('open', function () {
+                console.debug('[SSE] connected /posts/events, event: posts-change');
             });
+            es.addEventListener('error', function (err) {
+                console.error('[SSE] error /posts/events', err);
+            });
+            es.addEventListener('posts-change', showPostToast);
         })();
     </script>
 </section>

@@ -3,6 +3,7 @@ package com.bialger.web
 import io.micronaut.http.sse.Event
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
+import org.slf4j.LoggerFactory
 import reactor.core.publisher.Sinks
 import java.util.concurrent.ConcurrentHashMap
 
@@ -11,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap
  */
 @Singleton
 class DomainEventSseHub {
+
+    private val log = LoggerFactory.getLogger(DomainEventSseHub::class.java)
 
     private val sinks = ConcurrentHashMap<String, Sinks.Many<String>>()
 
@@ -23,6 +26,9 @@ class DomainEventSseHub {
         sinkFor(topic).asFlux().map { payload -> Event.of(payload).name("$topic-change") }
 
     fun emitJson(topic: String, json: String) {
-        sinkFor(topic).tryEmitNext(json)
+        val r = sinkFor(topic).tryEmitNext(json)
+        if (r.isFailure) {
+            log.warn("SSE emit failed for topic {}: {} (no active /events listeners yet?)", topic, r)
+        }
     }
 }
