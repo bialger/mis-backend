@@ -4,6 +4,7 @@ import io.micronaut.http.sse.Event
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Sinks
 import java.util.concurrent.ConcurrentHashMap
 
@@ -17,13 +18,21 @@ class DomainEventSseHub {
 
     private val sinks = ConcurrentHashMap<String, Sinks.Many<String>>()
 
+    /** Один общий Flux на топик: иначе каждый GET /events создавал новый asFlux(), а повторная подписка на Publisher давала дубли событий (особенно при PATCH). */
+    private val sharedEventStreams = ConcurrentHashMap<String, Flux<Event<String>>>()
+
     private fun sinkFor(topic: String): Sinks.Many<String> =
         sinks.computeIfAbsent(topic) {
             Sinks.many().multicast().onBackpressureBuffer()
         }
 
     fun stream(topic: String): Publisher<Event<String>> =
-        sinkFor(topic).asFlux().map { payload -> Event.of(payload).name("$topic-change") }
+        sharedEventStreams.computeIfAbsent(topic) {
+            sinkFor(topic).asFlux()
+                .distinctUntilChanged()
+                .map { payload -> Event.of(payload).name("$topic-change") }
+                .share()
+        }
 
     fun emitJson(topic: String, json: String) {
         val r = sinkFor(topic).tryEmitNext(json)

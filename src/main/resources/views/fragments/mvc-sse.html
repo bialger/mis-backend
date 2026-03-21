@@ -10,18 +10,23 @@
             const eventName = /*[[${sseEventName}]]*/ '';
             if (!eventsUrl || !eventName) return;
             const notyf = new Notyf({ duration: 4500, position: { x: 'right', y: 'bottom' } });
-            let lastData = '';
+            let lastSig = '';
             let lastAt = 0;
             function showSseToast(e) {
-                const now = Date.now();
-                if (e.data === lastData && now - lastAt < 900) return;
-                lastData = e.data;
-                lastAt = now;
                 try {
                     const data = JSON.parse(e.data);
+                    const sig = (data.type || '') + '|' + String(data.id !== undefined && data.id !== null ? data.id : '') + '|' + (data.title || '');
+                    const now = Date.now();
+                    if (sig === lastSig && now - lastAt < 1200) return;
+                    lastSig = sig;
+                    lastAt = now;
                     const verb = data.type === 'CREATED' ? 'Создано: ' : data.type === 'UPDATED' ? 'Обновлено: ' : 'Удалено: ';
                     notyf.open({ type: 'success', message: verb + (data.title || '') });
                 } catch (_) {
+                    const now = Date.now();
+                    if (e.data === lastSig && now - lastAt < 1200) return;
+                    lastSig = e.data;
+                    lastAt = now;
                     notyf.open({ type: 'info', message: e.data });
                 }
             }
