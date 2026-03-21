@@ -47,11 +47,11 @@ class PostWebControllerTest(
             request,
             String::class.java
         )
-        // HttpResponse.seeOther() — 303 SEE_OTHER (GET follow-up after POST)
+        // HttpResponse.seeOther() — 303 SEE_OTHER to list (/posts), not detail
         response.status shouldBe HttpStatus.SEE_OTHER
         val location = response.header("Location") ?: error("no Location")
-        val id = location.substringAfterLast('/').toLong()
-        val entity = postRepository.findById(id).orElse(null).shouldNotBeNull()
-        entity.title shouldBe "Ctrl+Test"
+        location shouldBe "/posts"
+        val entity = postRepository.findAllOrdered().firstOrNull { it.title == "Ctrl+Test" }.shouldNotBeNull()
+        entity.body shouldBe "from http"
     }
 })

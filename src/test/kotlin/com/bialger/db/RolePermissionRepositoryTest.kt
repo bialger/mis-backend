@@ -21,7 +21,7 @@ class RolePermissionRepositoryTest(
     "save and findByRoleId" {
         val roleId = UUID.randomUUID()
         val permissionId = UUID.randomUUID()
-        roleRepository.save(RoleEntity(id = roleId, name = "DOCTOR"))
+        roleRepository.save(RoleEntity(id = roleId, name = "DOCTOR_TEST_${UUID.randomUUID().toString().replace("-", "").take(12)}"))
         permissionRepository.save(PermissionEntity(id = permissionId, code = "patient.view"))
 
         rolePermissionRepository.save(roleId, permissionId)
@@ -37,8 +37,8 @@ class RolePermissionRepositoryTest(
         permissionRepository.save(PermissionEntity(id = permissionId, code = "appointment.edit"))
         val role1 = UUID.randomUUID()
         val role2 = UUID.randomUUID()
-        roleRepository.save(RoleEntity(id = role1, name = "DOCTOR"))
-        roleRepository.save(RoleEntity(id = role2, name = "ADMIN"))
+        roleRepository.save(RoleEntity(id = role1, name = "DOCTOR_RP_${UUID.randomUUID().toString().replace("-", "").take(12)}"))
+        roleRepository.save(RoleEntity(id = role2, name = "ADMIN_RP_${UUID.randomUUID().toString().replace("-", "").take(12)}"))
         rolePermissionRepository.save(role1, permissionId)
         rolePermissionRepository.save(role2, permissionId)
 
@@ -49,7 +49,7 @@ class RolePermissionRepositoryTest(
     "deleteByRoleIdAndPermissionId" {
         val roleId = UUID.randomUUID()
         val permissionId = UUID.randomUUID()
-        roleRepository.save(RoleEntity(id = roleId, name = "NURSE"))
+        roleRepository.save(RoleEntity(id = roleId, name = "NURSE_TEST_${UUID.randomUUID().toString().replace("-", "").take(12)}"))
         permissionRepository.save(PermissionEntity(id = permissionId, code = "record.view"))
         rolePermissionRepository.save(roleId, permissionId)
 

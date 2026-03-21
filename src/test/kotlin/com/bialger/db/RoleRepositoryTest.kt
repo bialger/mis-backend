@@ -15,9 +15,10 @@ class RoleRepositoryTest(
 ) : StringSpec({
 
     "save and findById" {
+        val uniqueName = "ROLE_TEST_${UUID.randomUUID().toString().replace("-", "").take(12)}"
         val entity = RoleEntity(
             id = UUID.randomUUID(),
-            name = "DOCTOR",
+            name = uniqueName,
             displayName = "Doctor",
             description = "Medical staff"
         )
@@ -25,15 +26,16 @@ class RoleRepositoryTest(
 
         val found = repository.findById(entity.id).orElse(null)
         found.shouldNotBeNull()
-        found.name shouldBe "DOCTOR"
+        found.name shouldBe uniqueName
         found.displayName shouldBe "Doctor"
     }
 
     "findByName" {
         val id = UUID.randomUUID()
-        repository.save(RoleEntity(id = id, name = "ADMIN"))
+        val uniqueName = "ADMIN_TEST_${UUID.randomUUID().toString().replace("-", "").take(12)}"
+        repository.save(RoleEntity(id = id, name = uniqueName))
 
-        val found = repository.findByName("ADMIN")
+        val found = repository.findByName(uniqueName)
         found.shouldNotBeNull()
         found.id shouldBe id
     }

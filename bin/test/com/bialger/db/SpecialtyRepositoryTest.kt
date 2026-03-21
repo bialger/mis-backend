@@ -29,10 +29,14 @@ class SpecialtyRepositoryTest(
     }
 
     "findAll" {
-        repository.save(SpecialtyEntity(UUID.randomUUID(), "Therapist"))
-        repository.save(SpecialtyEntity(UUID.randomUUID(), "Surgeon"))
+        val suffix = UUID.randomUUID().toString().replace("-", "").take(8)
+        val n1 = "Therapist_$suffix"
+        val n2 = "Surgeon_$suffix"
+        repository.save(SpecialtyEntity(UUID.randomUUID(), n1))
+        repository.save(SpecialtyEntity(UUID.randomUUID(), n2))
 
         val all = repository.findAll()
-        all shouldHaveSize 2
+        val mine = all.filter { it.name == n1 || it.name == n2 }
+        mine shouldHaveSize 2
     }
 })

@@ -22,7 +22,7 @@ class EmployeeRoleRepositoryTest(
         val employeeId = UUID.randomUUID()
         val roleId = UUID.randomUUID()
         employeeRepository.save(EmployeeEntity(id = employeeId, fullName = "E", email = "e@test.mis", passwordHash = "x", isActive = true))
-        roleRepository.save(RoleEntity(id = roleId, name = "DOCTOR", displayName = "Doctor"))
+        roleRepository.save(RoleEntity(id = roleId, name = "DOCTOR_TEST_${UUID.randomUUID().toString().replace("-", "").take(12)}", displayName = "Doctor"))
 
         employeeRoleRepository.save(employeeId, roleId)
 
@@ -34,7 +34,7 @@ class EmployeeRoleRepositoryTest(
 
     "findByRoleId" {
         val roleId = UUID.randomUUID()
-        roleRepository.save(RoleEntity(id = roleId, name = "NURSE", displayName = "Nurse"))
+        roleRepository.save(RoleEntity(id = roleId, name = "NURSE_TEST_${UUID.randomUUID().toString().replace("-", "").take(12)}", displayName = "Nurse"))
         val emp1 = UUID.randomUUID()
         val emp2 = UUID.randomUUID()
         employeeRepository.save(EmployeeEntity(id = emp1, fullName = "E1", email = "e1@test.mis", passwordHash = "x", isActive = true))
@@ -50,7 +50,7 @@ class EmployeeRoleRepositoryTest(
         val employeeId = UUID.randomUUID()
         val roleId = UUID.randomUUID()
         employeeRepository.save(EmployeeEntity(id = employeeId, fullName = "E", email = "e3@test.mis", passwordHash = "x", isActive = true))
-        roleRepository.save(RoleEntity(id = roleId, name = "ADMIN"))
+        roleRepository.save(RoleEntity(id = roleId, name = "ADMIN_TEST_${UUID.randomUUID().toString().replace("-", "").take(12)}"))
         employeeRoleRepository.save(employeeId, roleId)
 
         employeeRoleRepository.deleteByEmployeeIdAndRoleId(employeeId, roleId)

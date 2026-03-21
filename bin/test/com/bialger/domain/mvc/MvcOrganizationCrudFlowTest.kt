@@ -31,9 +31,9 @@ class MvcOrganizationCrudFlowTest(
         val response = client.toBlocking().exchange(request, String::class.java)
         response.status shouldBe HttpStatus.SEE_OTHER
         val location = response.header("Location").shouldNotBeNull()
-        val id = UUID.fromString(location.substringAfterLast('/'))
+        location shouldBe "/mvc/organizations"
 
-        organizationRepository.findById(id).orElse(null).shouldNotBeNull().name shouldBe name
+        val id = organizationRepository.findByName(name).shouldNotBeNull().id
 
         client.toBlocking().exchange(io.micronaut.http.HttpRequest.DELETE<Any>("/mvc/organizations/$id"), String::class.java)
         organizationRepository.findById(id).isPresent shouldBe false

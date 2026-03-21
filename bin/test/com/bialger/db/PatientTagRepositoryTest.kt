@@ -29,7 +29,8 @@ class PatientTagRepositoryTest(
         val patientId = UUID.randomUUID()
         patientRepository.save(PatientEntity(id = patientId, cardNumber = "C1", organizationId = orgId, fullName = "P"))
         val tagTypeId = UUID.randomUUID()
-        patientTagTypeRepository.save(PatientTagTypeEntity(id = tagTypeId, code = "VIP", name = "VIP", isActive = true))
+        val code = "PTAG_${UUID.randomUUID().toString().replace("-", "").take(12)}"
+        patientTagTypeRepository.save(PatientTagTypeEntity(id = tagTypeId, code = code, name = "VIP", isActive = true))
         return patientId to tagTypeId
     }
 
@@ -52,7 +53,8 @@ class PatientTagRepositoryTest(
         val (patientId, tagTypeId) = createPatientAndTagType()
         patientTagRepository.save(PatientTagEntity(UUID.randomUUID(), patientId, tagTypeId))
         val tagTypeId2 = UUID.randomUUID()
-        patientTagTypeRepository.save(PatientTagTypeEntity(id = tagTypeId2, code = "X", name = "X", isActive = true))
+        val code2 = "PTAG_X_${UUID.randomUUID().toString().replace("-", "").take(12)}"
+        patientTagTypeRepository.save(PatientTagTypeEntity(id = tagTypeId2, code = code2, name = "X", isActive = true))
         patientTagRepository.save(PatientTagEntity(UUID.randomUUID(), patientId, tagTypeId2))
 
         val list = patientTagRepository.findByPatientId(patientId)
