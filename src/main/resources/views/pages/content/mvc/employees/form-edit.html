@@ -24,11 +24,19 @@
                 const p = new URLSearchParams(new FormData(e.target));
                 fetch('/mvc/employees/' + id, {
                     method: 'PATCH',
+                    redirect: 'manual',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: p.toString()
                 }).then(function (r) {
-                    if (r.ok || (r.status >= 300 && r.status < 400)) window.location.href = '/mvc/employees/' + id;
-                    else window.location.reload();
+                    var detailUrl = '/mvc/employees/' + id;
+                    var loc = r.headers.get('Location');
+                    if (r.status >= 300 && r.status < 400) {
+                        window.location.href = loc ? new URL(loc, window.location.origin).href : detailUrl;
+                        return;
+                    }
+                    window.location.reload();
+                }).catch(function () {
+                    window.location.reload();
                 });
             });
         })();
