@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Категория склада</h2>
+    <div th:if="${error != null}" class="m-error-message" th:text="${error}"></div>
+    <form class="m-card m-section" method="post" th:action="@{/mvc/inventory-categories}" accept-charset="UTF-8">
+        <p><label>Название<br><input name="name" required maxlength="100" style="width:100%;max-width:32rem"></label></p>
+        <p><label>Описание<br><textarea name="description" rows="3" style="width:100%;max-width:32rem"></textarea></label></p>
+        <p>
+            <button type="submit" class="m-tab-button">Сохранить</button>
+            <a class="m-tab-button" th:href="@{/mvc/inventory-categories}">Отмена</a>
+        </p>
+    </form>
+</section>
+</body>
+</html>

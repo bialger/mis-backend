@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Системная настройка</h2>
+    <div th:if="${error != null}" class="m-error-message" th:text="${error}"></div>
+    <form class="m-card m-section" method="post" th:action="@{/mvc/system-settings}" accept-charset="UTF-8">
+        <p><label>Филиал (UUID, пусто = глобально)<br><input name="branchId" style="width:100%;max-width:36rem"></label></p>
+        <p><label>Ключ<br><input name="key" required maxlength="100" style="width:100%;max-width:32rem"></label></p>
+        <p><label>Значение<br><textarea name="value" rows="3" style="width:100%;max-width:40rem"></textarea></label></p>
+        <p><label>Описание<br><textarea name="description" rows="2" style="width:100%;max-width:40rem"></textarea></label></p>
+        <p>
+            <button type="submit" class="m-tab-button">Сохранить</button>
+            <a class="m-tab-button" th:href="@{/mvc/system-settings}">Отмена</a>
+        </p>
+    </form>
+</section>
+</body>
+</html>

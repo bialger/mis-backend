@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Редактирование пациента</h2>
+    <div th:if="${error != null}" class="m-error-message" th:text="${error}"></div>
+    <form class="m-card m-section" id="edit-f" th:if="${patient != null}" accept-charset="UTF-8">
+        <p><label>Организация<br>
+            <select name="organizationId" required style="width:100%;max-width:32rem">
+                <option value="">—</option>
+                <option th:each="o : ${organizations}" th:value="${o.id}" th:selected="${o.id == patient.organizationId}" th:text="${o.name}"></option>
+            </select>
+        </label></p>
+        <p><label>Номер карты<br><input name="cardNumber" required style="width:100%;max-width:32rem" th:value="${patient.cardNumber}"></label></p>
+        <p><label>ФИО<br><input name="fullName" required style="width:100%;max-width:32rem" th:value="${patient.fullName}"></label></p>
+        <p><label>Пол<br>
+            <select name="gender" style="width:100%;max-width:32rem">
+                <option value="">—</option>
+                <option value="M" th:selected="${patient.gender != null and patient.gender.name() == 'M'}">М</option>
+                <option value="F" th:selected="${patient.gender != null and patient.gender.name() == 'F'}">Ж</option>
+            </select>
+        </label></p>
+        <p><label>Дата рождения<br><input name="birthDate" type="date" style="width:100%;max-width:32rem" th:value="${patient.birthDate != null ? #temporals.format(patient.birthDate, 'yyyy-MM-dd') : ''}"></label></p>
+        <p><label>Телефон<br><input name="phone" style="width:100%;max-width:32rem" th:value="${patient.phone}"></label></p>
+        <p><label>Email<br><input name="email" type="email" style="width:100%;max-width:32rem" th:value="${patient.email}"></label></p>
+        <p>
+            <button type="submit" class="m-tab-button">Сохранить</button>
+            <a class="m-tab-button" th:href="@{/mvc/patients/{id}(id=${patient.id})}">Отмена</a>
+        </p>
+    </form>
+    <script th:inline="javascript" th:if="${patient != null}">
+        (function () {
+            const id = /*[[${patient.id}]]*/ '';
+            document.getElementById('edit-f').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const p = new URLSearchParams(new FormData(e.target));
+                fetch('/mvc/patients/' + id, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: p.toString()
+                }).then(function (r) {
+                    if (r.ok || (r.status >= 300 && r.status < 400)) window.location.href = '/mvc/patients/' + id;
+                    else window.location.reload();
+                });
+            });
+        })();
+    </script>
+</section>
+</body>
+</html>

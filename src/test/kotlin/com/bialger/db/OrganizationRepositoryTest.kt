@@ -35,9 +35,9 @@ class OrganizationRepositoryTest(
         val id = UUID.randomUUID()
         repository.save(OrganizationEntity(id = id, name = "Медцентр №2"))
 
-        val all = repository.findAll()
-        all shouldHaveSize 1
-        all.any { it.id == id } shouldBe true
+        val mine = repository.findAll().filter { it.id == id }
+        mine shouldHaveSize 1
+        mine.first().name shouldBe "Медцентр №2"
     }
 
     "update existing organization" {

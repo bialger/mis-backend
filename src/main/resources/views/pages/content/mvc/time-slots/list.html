@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Слоты расписания</h2>
+    <p><a class="m-tab-button" th:href="@{/mvc/time-slots/add}">Добавить</a></p>
+    <div th:if="${#lists.isEmpty(rows)}" class="m-card"><p>Нет записей.</p></div>
+    <ul th:unless="${#lists.isEmpty(rows)}" class="m-card">
+        <li th:each="row : ${rows}">
+            <a th:href="@{/mvc/time-slots/{id}(id=${row.slot.id})}"
+               th:text="|${row.slot.slotDate} ${row.slot.startTime}–${row.slot.endTime}|">slot</a>
+            <span class="m-section" th:text="|${row.employeeName} · ${row.branchName}|">meta</span>
+        </li>
+    </ul>
+    <div th:replace="~{fragments/mvc-sse :: client}"></div>
+</section>
+</body>
+</html>

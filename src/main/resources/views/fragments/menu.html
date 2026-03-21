@@ -4,6 +4,10 @@
 <th:block th:fragment="mainMenu(activePage)">
     <li><a th:href="@{/}" class="is-hoverable-link"
            th:classappend="${activePage == 'dashboard'} ? ' is-active-link'">Панель управления</a></li>
+    <li><a th:href="@{/mvc}" class="is-hoverable-link"
+           th:classappend="${activePage == 'mvc'} ? ' is-active-link'">MVC (домены)</a></li>
+    <li><a th:href="@{/posts}" class="is-hoverable-link"
+           th:classappend="${activePage == 'posts'} ? ' is-active-link'">Посты</a></li>
     <li><a th:href="@{/patients}" class="is-hoverable-link"
            th:classappend="${activePage == 'patients'} ? ' is-active-link'">Пациенты</a></li>
     <li><a th:href="@{/doctors}" class="is-hoverable-link"

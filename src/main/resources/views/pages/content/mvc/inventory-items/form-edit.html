@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Редактирование позиции</h2>
+    <div th:if="${error != null}" class="m-error-message" th:text="${error}"></div>
+    <form class="m-card m-section" id="edit-f" th:if="${item != null}" accept-charset="UTF-8">
+        <p><label>Категория<br>
+            <select name="categoryId" required style="width:100%;max-width:32rem">
+                <option value="">—</option>
+                <option th:each="c : ${categories}" th:value="${c.id}" th:selected="${c.id == item.categoryId}" th:text="${c.name}"></option>
+            </select>
+        </label></p>
+        <p><label>Филиал<br>
+            <select name="branchId" required style="width:100%;max-width:32rem">
+                <option value="">—</option>
+                <option th:each="b : ${branches}" th:value="${b.id}" th:selected="${b.id == item.branchId}" th:text="${b.name}"></option>
+            </select>
+        </label></p>
+        <p><label>Кабинет<br>
+            <select name="roomId" style="width:100%;max-width:32rem">
+                <option value="">—</option>
+                <option th:each="r : ${rooms}" th:value="${r.id}" th:selected="${item.roomId != null and r.id == item.roomId}" th:text="${r.name}"></option>
+            </select>
+        </label></p>
+        <p><label>Наименование<br><input name="name" required style="width:100%;max-width:32rem" th:value="${item.name}"></label></p>
+        <p><label>Ед. изм.<br><input name="unit" style="width:100%;max-width:32rem" th:value="${item.unit}"></label></p>
+        <p><label>Количество<br><input name="quantity" style="width:100%;max-width:32rem" th:value="${item.quantity}"></label></p>
+        <p><label>Мин. остаток<br><input name="minQuantity" style="width:100%;max-width:32rem" th:value="${item.minQuantity}"></label></p>
+        <p><label>Себестоимость<br><input name="costPrice" style="width:100%;max-width:32rem" th:value="${item.costPrice}"></label></p>
+        <p>
+            <button type="submit" class="m-tab-button">Сохранить</button>
+            <a class="m-tab-button" th:href="@{/mvc/inventory-items/{id}(id=${item.id})}">Отмена</a>
+        </p>
+    </form>
+    <script th:inline="javascript" th:if="${item != null}">
+        (function () {
+            const id = /*[[${item.id}]]*/ '';
+            document.getElementById('edit-f').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const p = new URLSearchParams(new FormData(e.target));
+                fetch('/mvc/inventory-items/' + id, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: p.toString()
+                }).then(function (r) {
+                    if (r.ok || (r.status >= 300 && r.status < 400)) window.location.href = '/mvc/inventory-items/' + id;
+                    else window.location.reload();
+                });
+            });
+        })();
+    </script>
+</section>
+</body>
+</html>

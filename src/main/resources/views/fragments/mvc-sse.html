@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="client">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script th:inline="javascript">
+        (function () {
+            const eventsUrl = /*[[${sseEventsPath}]]*/ '';
+            const eventName = /*[[${sseEventName}]]*/ '';
+            if (!eventsUrl || !eventName) return;
+            const notyf = new Notyf({ duration: 4500, position: { x: 'right', y: 'bottom' } });
+            const es = new EventSource(eventsUrl);
+            es.addEventListener(eventName, function (e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    const verb = data.type === 'CREATED' ? 'Создано: ' : data.type === 'UPDATED' ? 'Обновлено: ' : 'Удалено: ';
+                    notyf.open({ type: 'success', message: verb + (data.title || '') });
+                } catch (_) {
+                    notyf.open({ type: 'info', message: e.data });
+                }
+            });
+        })();
+    </script>
+</th:block>
+</body>
+</html>

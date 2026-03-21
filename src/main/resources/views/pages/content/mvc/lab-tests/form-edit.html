@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Редактирование лаб. теста</h2>
+    <div th:if="${error != null}" class="m-error-message" th:text="${error}"></div>
+    <form class="m-card m-section" id="edit-f" th:if="${item != null}" accept-charset="UTF-8">
+        <p><label>Название<br><input name="name" required style="width:100%;max-width:32rem" th:value="${item.name}"></label></p>
+        <p><label>Описание<br><textarea name="description" rows="3" style="width:100%;max-width:32rem" th:text="${item.description}"></textarea></label></p>
+        <p><label>Цена<br><input name="price" placeholder="0.00" style="width:100%;max-width:32rem" th:value="${item.price}"></label></p>
+        <p><label>Лаборатория<br>
+            <select name="laboratoryId" style="width:100%;max-width:32rem">
+                <option value="">— не привязано —</option>
+                <option th:each="lab : ${laboratories}" th:value="${lab.id}" th:selected="${item.laboratoryId != null and lab.id == item.laboratoryId}" th:text="${lab.name}"></option>
+            </select>
+        </label></p>
+        <p><label><input type="checkbox" name="isActive" value="on" th:checked="${item.isActive}"> Активен</label></p>
+        <p>
+            <button type="submit" class="m-tab-button">Сохранить</button>
+            <a class="m-tab-button" th:href="@{/mvc/lab-tests/{id}(id=${item.id})}">Отмена</a>
+        </p>
+    </form>
+    <script th:inline="javascript" th:if="${item != null}">
+        (function () {
+            const id = /*[[${item.id}]]*/ '';
+            document.getElementById('edit-f').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const p = new URLSearchParams(new FormData(e.target));
+                fetch('/mvc/lab-tests/' + id, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: p.toString()
+                }).then(function (r) {
+                    if (r.ok || (r.status >= 300 && r.status < 400)) window.location.href = '/mvc/lab-tests/' + id;
+                    else window.location.reload();
+                });
+            });
+        })();
+    </script>
+</section>
+</body>
+</html>

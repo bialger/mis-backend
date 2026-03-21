@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Посты</h2>
+    <p class="m-section">Список постов из базы данных; уведомления об изменениях приходят по SSE.</p>
+    <p><a class="m-tab-button" th:href="@{/posts/add}">Добавить пост</a></p>
+
+    <div th:if="${#lists.isEmpty(posts)}" class="m-card">
+        <p>Пока нет ни одного поста.</p>
+    </div>
+
+    <div th:unless="${#lists.isEmpty(posts)}" class="m-card">
+        <ul class="m-card">
+            <li th:each="p : ${posts}">
+                <a th:href="@{/posts/{id}(id=${p.id})}" th:text="${p.title}">Заголовок</a>
+                <span th:text="' — ' + ${p.createdAt}"></span>
+            </li>
+        </ul>
+    </div>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script>
+        (function () {
+            const notyf = new Notyf({ duration: 4500, position: { x: 'right', y: 'bottom' } });
+            const es = new EventSource('/posts/events');
+            es.addEventListener('posts-change', function (e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    const verb = data.type === 'CREATED' ? 'Создан: ' : data.type === 'UPDATED' ? 'Обновлён: ' : 'Удалён: ';
+                    notyf.open({ type: 'success', message: verb + (data.title || '') });
+                } catch (_) {
+                    notyf.open({ type: 'info', message: e.data });
+                }
+            });
+        })();
+    </script>
+</section>
+</body>
+</html>
