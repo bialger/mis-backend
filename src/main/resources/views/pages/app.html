@@ -2,9 +2,9 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/assets :: head(${title}, ${pageScript})}"></head>
 <body>
+<script th:src="@{/assets/js/mvc-form-follow.js}"></script>
 <div th:if="${showHeader and !publicLayout}" th:replace="~{fragments/header :: appHeader(${activePage})}"></div>
 <div th:replace="~{fragments/content :: appContent(${contentView}, ${contentFragment}, ${activePage}, ${showSidebar}, ${publicLayout})}"></div>
 <div th:if="${showFooter}" th:replace="~{fragments/footer :: appFooter(${currentYear})}"></div>
-<script th:src="@{/assets/js/mvc-form-follow.js}"></script>
 </body>
 </html>

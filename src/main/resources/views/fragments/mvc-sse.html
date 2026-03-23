@@ -9,7 +9,21 @@
             const eventsUrl = /*[[${sseEventsPath}]]*/ '';
             const eventName = /*[[${sseEventName}]]*/ '';
             if (!eventsUrl || !eventName) return;
-            const notyf = new Notyf({ duration: 4500, position: { x: 'right', y: 'bottom' } });
+            let notyf = null;
+            try {
+                if (typeof Notyf !== 'undefined') {
+                    notyf = new Notyf({ duration: 4500, position: { x: 'right', y: 'bottom' } });
+                }
+            } catch (e) {
+                console.warn('[SSE] Notyf unavailable', e);
+            }
+            function toast(msg, type) {
+                if (notyf) {
+                    notyf.open({ type: type || 'success', message: msg });
+                } else {
+                    console.info('[SSE]', msg);
+                }
+            }
             let lastSig = '';
             let lastAt = 0;
             function showSseToast(e) {
@@ -21,14 +35,14 @@
                     lastSig = sig;
                     lastAt = now;
                     const verb = data.type === 'CREATED' ? 'Создано: ' : data.type === 'UPDATED' ? 'Обновлено: ' : 'Удалено: ';
-                    notyf.open({ type: 'success', message: verb + (data.title || '') });
+                    toast(verb + (data.title || ''), 'success');
                     window.dispatchEvent(new CustomEvent('crm-sse-refresh', { detail: { eventName: eventName, data: e.data } }));
                 } catch (_) {
                     const now = Date.now();
                     if (e.data === lastSig && now - lastAt < 1200) return;
                     lastSig = e.data;
                     lastAt = now;
-                    notyf.open({ type: 'info', message: e.data });
+                    toast(String(e.data), 'info');
                     window.dispatchEvent(new CustomEvent('crm-sse-refresh', { detail: { eventName: eventName, data: e.data } }));
                 }
             }
@@ -39,7 +53,6 @@
             es.addEventListener('error', function (err) {
                 console.error('[SSE] error', eventsUrl, err);
             });
-            /* только именованное событие; слушатель "message" дублировал тост при некоторых клиентах */
             es.addEventListener(eventName, showSseToast);
         })();
     </script>

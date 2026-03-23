@@ -68,8 +68,8 @@ class CrmShellPageData(
 
     fun scheduleExtras(): Map<String, Any> = shellExtras(
         payload = schedulePayload(),
-        ssePath = "/mvc/time-slots/events",
-        sseName = com.bialger.domain.scheduling.mvc.TimeSlotMvcService.EVENT_NAME
+        ssePath = "/mvc/appointments/events",
+        sseName = AppointmentMvcService.EVENT_NAME
     )
 
     fun appointmentsListExtras(): Map<String, Any> = shellExtras(
