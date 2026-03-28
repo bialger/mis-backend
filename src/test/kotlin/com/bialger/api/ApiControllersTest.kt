@@ -51,6 +51,13 @@ class ApiControllersTest(
         ex.status shouldBe HttpStatus.NOT_FOUND
     }
 
+    "GET /api/patients/{id}/tags for missing patient returns 404" {
+        val ex = shouldThrow<HttpClientResponseException> {
+            client.toBlocking().retrieve("/api/patients/${UUID.randomUUID()}/tags")
+        }
+        ex.status shouldBe HttpStatus.NOT_FOUND
+    }
+
     "POST /api/patients with invalid bean validation returns 400" {
         val body =
             """{"organizationId":"00000000-0000-0000-0000-000000000001","cardNumber":"","fullName":"Name"}"""
@@ -84,8 +91,8 @@ class ApiControllersTest(
         objectMapper.readTree(body).path("content").isArray shouldBe true
     }
 
-    "GET /api/branches returns JSON array body" {
-        val body = client.toBlocking().retrieve("/api/branches")
-        objectMapper.readTree(body).isArray shouldBe true
+    "GET /api/branches returns paged JSON" {
+        val body = client.toBlocking().retrieve("/api/branches?page=0&size=50")
+        objectMapper.readTree(body).path("content").isArray shouldBe true
     }
 })

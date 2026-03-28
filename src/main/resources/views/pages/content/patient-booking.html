@@ -35,11 +35,11 @@
                 <div v-else>
                     <p v-if="slots.length === 0" class="m-info-badge">Свободных слотов не найдено на выбранный день.</p>
                     <div class="m-slot-list">
-                        <div v-for="slot in slots" :key="slot.start"
+                        <div v-for="slot in slots" :key="slot.id"
                              class="m-slot-card"
-                             :class="{ 'is-busy': !slot.free, 'is-selected': selectedSlot && selectedSlot.start === slot.start }"
+                             :class="{ 'is-busy': !slot.free, 'is-selected': selectedSlot && selectedSlot.id === slot.id }"
                              @click="selectSlot(slot)">
-                            <div class="m-calendar-slot-time">{{ formatSlot(slot.start) }} - {{ formatSlot(slot.end) }}</div>
+                            <div class="m-calendar-slot-time">{{ formatSlot(slot.start) }} – {{ formatSlot(slot.end) }}</div>
                             <div style="font-size: 0.85rem; color: var(--muted-color);">{{ slot.free ? 'Свободно' : 'Занято' }}</div>
                         </div>
                     </div>

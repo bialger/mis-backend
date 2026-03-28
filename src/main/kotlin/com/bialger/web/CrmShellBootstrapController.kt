@@ -7,10 +7,12 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.QueryValue
 import java.util.UUID
+import io.swagger.v3.oas.annotations.Hidden
 
 /**
- * Legacy bootstrap under `/mvc/shell` — тот же payload, что и [com.bialger.api.ShellBootstrapApiController].
+ * Legacy bootstrap under `/mvc/shell` — same payload as [com.bialger.api.ShellBootstrapApiController].
  */
+@Hidden
 @Controller("/mvc/shell")
 class CrmShellBootstrapController(
     private val crmShellApplicationService: CrmShellApplicationService

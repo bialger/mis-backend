@@ -1,34 +1,58 @@
 package com.bialger.application.shell
 
 import com.bialger.domain.core.entity.EmployeeEntity
+import com.bialger.domain.clinical.mvc.MedicalRecordMvcService
+import com.bialger.domain.clinical.repository.MedicalRecordRepository
 import com.bialger.domain.core.repository.BranchRepository
+import com.bialger.domain.core.repository.EmployeeBranchRepository
 import com.bialger.domain.core.repository.EmployeeRepository
+import com.bialger.domain.core.repository.EmployeeRoleRepository
 import com.bialger.domain.core.repository.OrganizationRepository
+import com.bialger.domain.core.repository.RoleRepository
 import com.bialger.domain.core.repository.RoomRepository
+import com.bialger.domain.core.repository.SpecialtyRepository
+import com.bialger.domain.finance.entity.PaymentEntity
+import com.bialger.domain.finance.enums.PaymentStatusType
+import com.bialger.domain.finance.repository.PaymentRepository
 import com.bialger.domain.inventory.mvc.InventoryItemMvcService
+import com.bialger.domain.inventory.repository.InventoryCategoryRepository
 import com.bialger.domain.patient.mvc.PatientMvcService
+import com.bialger.domain.patient.repository.PatientTagRepository
+import com.bialger.domain.patient.repository.PatientTagTypeRepository
 import com.bialger.domain.scheduling.entity.AppointmentEntity
 import com.bialger.domain.scheduling.entity.TimeSlotEntity
+import com.bialger.domain.scheduling.enums.AppointmentSource
 import com.bialger.domain.scheduling.enums.AppointmentStatus
 import com.bialger.domain.scheduling.mvc.AppointmentListRow
 import com.bialger.domain.scheduling.mvc.AppointmentMvcService
 import com.bialger.domain.scheduling.mvc.TimeSlotMvcService
+import com.bialger.domain.scheduling.repository.ServiceRepository
 import com.bialger.domain.scheduling.repository.TimeSlotRepository
+import com.bialger.domain.attachment.repository.IntegrationRepository
+import com.bialger.domain.clinical.repository.TemplateRepository
 import com.bialger.domain.system.entity.AuditLogEntity
 import com.bialger.domain.system.mvc.SystemSettingMvcService
 import com.bialger.domain.system.repository.AuditLogRepository
 import io.micronaut.data.model.Page
 import io.micronaut.data.model.Pageable
+import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.UUID
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
- * Application service: собирает представления для SPA/Thymeleaf и REST bootstrap,
- * не содержит транспортной логики (контроллеры остаются тонкими).
+ * Application service: builds views for SPA/Thymeleaf and REST bootstrap.
+ * No transport logic here (controllers stay thin).
+ *
+ * Read-only transaction: JDBC repositories (в т.ч. [EmployeeBranchRepository]) требуют активное соединение.
  */
 @Singleton
+@Transactional(readOnly = true)
 class CrmShellApplicationService(
     private val patientMvcService: PatientMvcService,
     private val organizationRepository: OrganizationRepository,
@@ -40,14 +64,36 @@ class CrmShellApplicationService(
     private val roomRepository: RoomRepository,
     private val inventoryItemMvcService: InventoryItemMvcService,
     private val systemSettingMvcService: SystemSettingMvcService,
-    private val auditLogRepository: AuditLogRepository
+    private val auditLogRepository: AuditLogRepository,
+    private val medicalRecordMvcService: MedicalRecordMvcService,
+    private val medicalRecordRepository: MedicalRecordRepository,
+    private val roleRepository: RoleRepository,
+    private val specialtyRepository: SpecialtyRepository,
+    private val patientTagRepository: PatientTagRepository,
+    private val patientTagTypeRepository: PatientTagTypeRepository,
+    private val paymentRepository: PaymentRepository,
+    private val employeeBranchRepository: EmployeeBranchRepository,
+    private val employeeRoleRepository: EmployeeRoleRepository,
+    private val serviceRepository: ServiceRepository,
+    private val templateRepository: TemplateRepository,
+    private val integrationRepository: IntegrationRepository,
+    private val inventoryCategoryRepository: InventoryCategoryRepository
 ) {
 
-    fun patientsPayload(): Map<String, Any?> = mapOf(
-        "kind" to "patients",
-        "apiBase" to "/api/patients",
-        "items" to patientMvcService.listAll().map { patientVm(it) }
-    )
+    fun patientsPayload(): Map<String, Any?> {
+        val patients = patientMvcService.listAll()
+        val iconsByPatient = loadPatientIcons(patients.map { it.id })
+        return mapOf(
+            "kind" to "patients",
+            "apiBase" to "/api/patients",
+            "items" to patients.map { p ->
+                patientVm(p, iconsByPatient[p.id].orEmpty())
+            },
+            "organizations" to organizationRepository.findAllOrdered().map { o ->
+                mapOf("id" to o.id.toString(), "name" to o.name)
+            }
+        )
+    }
 
     fun patientDetailPayload(id: UUID): Map<String, Any?>? {
         val p = patientMvcService.getById(id) ?: return null
@@ -56,11 +102,27 @@ class CrmShellApplicationService(
         val appts = appointmentMvcService.listRows()
             .filter { it.appointment.patientId == p.id }
             .map { appointmentVm(it, slots) }
+        val icons = loadPatientIcons(listOf(p.id))[p.id].orEmpty()
+        val assignedTagTypeIds = patientTagRepository.findByPatientId(p.id).map { it.tagTypeId.toString() }
         return mapOf(
             "kind" to "patient-detail",
             "apiBase" to "/api/patients",
-            "patient" to patientVm(p) + mapOf("organizationName" to orgName),
+            "patient" to patientVm(p, icons) + mapOf(
+                "organizationName" to orgName,
+                "cardCreatedAt" to (p.createdAt?.toString() ?: ""),
+                "assignedTagTypeIds" to assignedTagTypeIds
+            ),
             "appointments" to appts,
+            "medicalRecords" to medicalRecordMvcService.listMapsByPatientId(p.id),
+            "patientTagTypes" to patientTagTypeRepository.findAllOrdered().map { t ->
+                mapOf(
+                    "id" to t.id.toString(),
+                    "code" to t.code,
+                    "name" to t.name,
+                    "icon" to (t.icon ?: ""),
+                    "isActive" to t.isActive
+                )
+            },
             "organizations" to organizationRepository.findAllOrdered().map { o ->
                 mapOf("id" to o.id.toString(), "name" to o.name)
             }
@@ -68,28 +130,31 @@ class CrmShellApplicationService(
     }
 
     fun doctorsPayload(): Map<String, Any?> {
-        val branchIds = branchRepository.findAllOrdered().map { it.id.toString() }
-        val users = employeeRepository.findAllOrdered().map { e ->
-            mapOf(
-                "id" to e.id.toString(),
-                "login" to (e.email ?: e.id.toString().take(8)),
-                "name" to e.fullName,
-                "role" to "DOCTOR",
-                "branchScope" to branchIds
-            )
-        }
         val slots = timeSlotRepository.findAllOrdered().associateBy { it.id }
+        val rows = appointmentMvcService.listRows()
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now(zone)
+        val monday = today.with(java.time.DayOfWeek.MONDAY)
+        val sunday = monday.plusDays(6)
+        val weekRows = rows.filter { r ->
+            val slotDate = r.appointment.timeSlotId?.let { slots[it] }?.slotDate
+                ?: r.appointment.createdAt?.atZone(zone)?.toLocalDate()
+            slotDate != null && !slotDate.isBefore(monday) && !slotDate.isAfter(sunday)
+        }
         return mapOf(
             "kind" to "doctors",
             "apiBase" to "/api",
-            "users" to users,
+            "users" to usersVm(),
             "branches" to branchesVm(),
-            "appointments" to appointmentMvcService.listRows().map { appointmentVm(it, slots) }
+            "appointments" to rows.map { appointmentVm(it, slots) },
+            "appointmentsThisWeek" to weekRows.map { appointmentVm(it, slots) }
         )
     }
 
     fun schedulePayload(): Map<String, Any?> {
         val slots = timeSlotRepository.findAllOrdered().associateBy { it.id }
+        val plist = patientMvcService.listAll()
+        val iconsByPatient = loadPatientIcons(plist.map { it.id })
         return mapOf(
             "kind" to "schedule",
             "apiBase" to "/api",
@@ -97,7 +162,7 @@ class CrmShellApplicationService(
             "branches" to branchesVm(),
             "users" to usersVm(),
             "rooms" to roomsVm(),
-            "patients" to patientMvcService.listAll().map { patientVm(it) },
+            "patients" to plist.map { p -> patientVm(p, iconsByPatient[p.id].orEmpty()) },
             "appointments" to appointmentMvcService.listRows().map { appointmentVm(it, slots) },
             "timeSlots" to timeSlotMvcService.listRows().map { slotVm(it) }
         )
@@ -107,18 +172,74 @@ class CrmShellApplicationService(
         val slots = timeSlotRepository.findAllOrdered().associateBy { it.id }
         return mapOf(
             "kind" to "appointments-list",
-            "apiBase" to "/api/appointments",
-            "rows" to appointmentMvcService.listRows().map { appointmentVm(it, slots) }
+            "apiBase" to "/api",
+            "rows" to appointmentMvcService.listRows().map { appointmentVm(it, slots) },
+            "patients" to patientMvcService.listAll().map { p ->
+                mapOf("id" to p.id.toString(), "fullName" to p.fullName)
+            },
+            "employees" to employeeRepository.findAllOrdered().map { e ->
+                mapOf("id" to e.id.toString(), "fullName" to e.fullName)
+            },
+            "timeSlots" to timeSlotMvcService.listRows().map { slotVm(it) },
+            "branches" to branchesVm(),
+            "rooms" to roomsVm(),
+            "statuses" to AppointmentStatus.entries.map { it.name },
+            "sources" to AppointmentSource.entries.map { it.name }
         )
     }
 
     fun appointmentDetailPayload(id: UUID): Map<String, Any?>? {
         val slots = timeSlotRepository.findAllOrdered().associateBy { it.id }
         val row = appointmentMvcService.listRows().find { it.appointment.id == id } ?: return null
+        val patient = patientMvcService.getById(row.appointment.patientId) ?: return null
+        val icons = loadPatientIcons(listOf(patient.id))[patient.id].orEmpty()
+        val apptMap = appointmentVm(row, slots).toMutableMap()
+        apptMap["patient"] = mapOf(
+            "id" to patient.id.toString(),
+            "fullName" to patient.fullName,
+            "phone" to (patient.phone ?: ""),
+            "icons" to icons
+        )
+        val payments = paymentRepository.findByAppointmentId(id)
+        val mr = medicalRecordRepository.findByAppointmentId(id)
+        val mrMap: Map<String, Any?>? = mr?.let {
+            val base = medicalRecordMvcService.toMap(it).toMutableMap()
+            base["locked"] = it.isSigned
+            base["lockReason"] = if (it.isSigned) {
+                "Медицинская запись подписана — редактирование ограничено"
+            } else {
+                null
+            }
+            base.toMap()
+        }
+        val statusHistory = auditLogRepository.findByEntityTypeAndEntityId("APPOINTMENT", id).map { e ->
+            mapOf(
+                "action" to e.action,
+                "status" to e.action,
+                "changedAt" to e.timestamp.toString(),
+                "changedBy" to e.employeeId.toString(),
+                "diff" to (e.newValue ?: e.oldValue ?: "")
+            )
+        }
         return mapOf(
             "kind" to "appointment-detail",
             "apiBase" to "/api/appointments",
-            "appointment" to appointmentVm(row, slots)
+            "appointment" to apptMap,
+            "patients" to patientMvcService.listAll().map { p ->
+                mapOf("id" to p.id.toString(), "fullName" to p.fullName)
+            },
+            "employees" to usersVm(),
+            "branches" to branchesVm(),
+            "rooms" to roomsVm(),
+            "timeSlots" to timeSlotMvcService.listRows().map { slotVm(it) },
+            "statuses" to AppointmentStatus.entries.map { it.name },
+            "sources" to AppointmentSource.entries.map { it.name },
+            "payments" to payments.map { paymentEntityVm(it) },
+            "payment" to payments.firstOrNull()?.let { paymentEntityVm(it) },
+            "medicalRecord" to mrMap,
+            "statusHistory" to statusHistory,
+            "me" to meVm(),
+            "permissions" to systemSettingMvcService.resolvePermissions()
         )
     }
 
@@ -142,7 +263,11 @@ class CrmShellApplicationService(
         "branches" to branchesVm(),
         "users" to usersVm(),
         "apiBase" to "/api/inventory-items",
-        "items" to inventoryItemMaps()
+        "items" to inventoryItemMaps(),
+        "categories" to inventoryCategoryRepository.findAllOrdered().map { c ->
+            mapOf("id" to c.id.toString(), "name" to c.name)
+        },
+        "permissions" to systemSettingMvcService.resolvePermissions()
     )
 
     fun settingsPayload(): Map<String, Any?> = mapOf(
@@ -150,7 +275,23 @@ class CrmShellApplicationService(
         "apiBase" to "/api",
         "me" to meVm(),
         "branches" to branchesVm(),
+        "organizations" to organizationRepository.findAllOrdered().map { o ->
+            mapOf("id" to o.id.toString(), "name" to o.name)
+        },
+        "employees" to usersVm(),
+        "rooms" to roomsVm(),
+        "roles" to roleRepository.findAllOrdered().map { r ->
+            mapOf(
+                "id" to r.id.toString(),
+                "name" to (r.displayName ?: r.name),
+                "code" to r.name
+            )
+        },
+        "specialties" to specialtyRepository.findAllOrdered().map { s ->
+            mapOf("id" to s.id.toString(), "name" to s.name)
+        },
         "sections" to settingsSectionsVm(),
+        "catalog" to catalogPayload(),
         "systemSettings" to systemSettingMvcService.listAll().map { s ->
             mapOf(
                 "id" to s.id.toString(),
@@ -159,38 +300,42 @@ class CrmShellApplicationService(
                 "value" to (s.value ?: ""),
                 "description" to (s.description ?: "")
             )
-        }
+        },
+        "permissions" to systemSettingMvcService.resolvePermissions()
     )
 
+    /** Справочник разделов настроек (вкладки как в статическом фронтенде). */
     private fun settingsSectionsVm(): List<Map<String, String>> = listOf(
-        mapOf("id" to "organizations", "label" to "Организации", "href" to "/mvc/organizations", "tab" to "org"),
-        mapOf("id" to "branches", "label" to "Филиалы", "href" to "/mvc/branches", "tab" to "org"),
-        mapOf("id" to "rooms", "label" to "Кабинеты", "href" to "/mvc/rooms", "tab" to "org"),
-        mapOf("id" to "roles", "label" to "Роли", "href" to "/mvc/roles", "tab" to "org"),
-        mapOf("id" to "permissions", "label" to "Права доступа", "href" to "/mvc/permissions", "tab" to "org"),
-        mapOf("id" to "employees", "label" to "Сотрудники", "href" to "/mvc/employees", "tab" to "org"),
-        mapOf("id" to "specialties", "label" to "Специализации", "href" to "/mvc/specialties", "tab" to "org"),
-        mapOf("id" to "patient-tag-types", "label" to "Типы тегов пациента", "href" to "/mvc/patient-tag-types", "tab" to "clinical"),
-        mapOf("id" to "templates", "label" to "Шаблоны документов", "href" to "/mvc/templates", "tab" to "clinical"),
-        mapOf("id" to "laboratories", "label" to "Лаборатории", "href" to "/mvc/laboratories", "tab" to "clinical"),
-        mapOf("id" to "lab-tests", "label" to "Лабораторные тесты", "href" to "/mvc/lab-tests", "tab" to "clinical"),
-        mapOf("id" to "salary-records", "label" to "Записи зарплаты", "href" to "/mvc/salary-records", "tab" to "finance"),
-        mapOf("id" to "payments", "label" to "Платежи", "href" to "/mvc/payments", "tab" to "finance"),
-        mapOf("id" to "integrations", "label" to "Интеграции", "href" to "/mvc/integrations", "tab" to "finance")
+        mapOf("id" to "employees", "label" to "Пользователи", "apiPath" to "/api/employees", "tab" to "org"),
+        mapOf("id" to "branches", "label" to "Филиалы", "apiPath" to "/api/branches", "tab" to "org"),
+        mapOf("id" to "rooms", "label" to "Кабинеты", "apiPath" to "/api/rooms", "tab" to "org"),
+        mapOf("id" to "services", "label" to "Услуги", "apiPath" to "/api/catalog/services", "tab" to "clinical"),
+        mapOf("id" to "templates", "label" to "Шаблоны", "apiPath" to "/api/catalog/templates", "tab" to "clinical"),
+        mapOf("id" to "patient-tag-types", "label" to "Значки пациентов", "apiPath" to "/api/catalog/patient-tag-types", "tab" to "clinical"),
+        mapOf("id" to "integrations", "label" to "Интеграции", "apiPath" to "/api/catalog/integrations", "tab" to "org"),
+        mapOf("id" to "time-slots", "label" to "Слоты расписания", "apiPath" to "/api/time-slots", "tab" to "clinical"),
+        mapOf("id" to "patients", "label" to "Пациенты", "apiPath" to "/api/patients", "tab" to "clinical"),
+        mapOf("id" to "appointments", "label" to "Записи", "apiPath" to "/api/appointments", "tab" to "clinical"),
+        mapOf("id" to "inventory", "label" to "Склад (ТМЦ)", "apiPath" to "/api/inventory-items", "tab" to "finance"),
+        mapOf("id" to "audit", "label" to "Журнал аудита", "apiPath" to "/api/audit-logs", "tab" to "finance"),
+        mapOf("id" to "reports-summary", "label" to "Сводка отчётов", "apiPath" to "/api/reports/summary", "tab" to "finance")
     )
 
     fun reportsPayload(): Map<String, Any?> {
         val slots = timeSlotRepository.findAllOrdered().associateBy { it.id }
         val rows = appointmentMvcService.listRows()
-        val today = java.time.LocalDate.now(ZoneId.systemDefault())
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now(zone)
         val todayCount = rows.count { r ->
             val a = r.appointment
             val t = a.timeSlotId?.let { slots[it] }
             if (t != null) t.slotDate == today
             else a.createdAt?.let { ins ->
-                ins.atZone(ZoneId.systemDefault()).toLocalDate() == today
+                ins.atZone(zone).toLocalDate() == today
             } == true
         }
+        val payments = paymentRepository.findAllOrdered()
+        val stats = buildReportsStats(rows, slots, payments)
         return mapOf(
             "kind" to "reports",
             "apiBase" to "/api",
@@ -201,15 +346,20 @@ class CrmShellApplicationService(
                 "employeesTotal" to employeeRepository.findAllOrdered().size,
                 "branchesTotal" to branchRepository.findAllOrdered().size
             ),
-            "mvcLinks" to listOf(
-                mapOf("label" to "Пациенты", "href" to "/mvc/patients"),
-                mapOf("label" to "Записи", "href" to "/mvc/appointments"),
-                mapOf("label" to "Расписание (слоты)", "href" to "/mvc/time-slots"),
-                mapOf("label" to "Сотрудники", "href" to "/mvc/employees"),
-                mapOf("label" to "Филиалы", "href" to "/mvc/branches"),
-                mapOf("label" to "Склад (ТМЦ)", "href" to "/mvc/inventory-items"),
-                mapOf("label" to "Платежи", "href" to "/mvc/payments"),
-                mapOf("label" to "Услуги", "href" to "/mvc/medical-services")
+            "stats" to stats,
+            "apiResourceLinks" to listOf(
+                mapOf("label" to "Пациенты", "path" to "/api/patients"),
+                mapOf("label" to "Записи", "path" to "/api/appointments"),
+                mapOf("label" to "Слоты расписания", "path" to "/api/time-slots"),
+                mapOf("label" to "Сотрудники", "path" to "/api/employees"),
+                mapOf("label" to "Филиалы", "path" to "/api/branches"),
+                mapOf("label" to "Кабинеты", "path" to "/api/rooms"),
+                mapOf("label" to "Склад (ТМЦ)", "path" to "/api/inventory-items"),
+                mapOf("label" to "Журнал аудита", "path" to "/api/audit-logs"),
+                mapOf("label" to "Платежи", "path" to "/api/payments"),
+                mapOf("label" to "Каталог услуг", "path" to "/api/catalog/services"),
+                mapOf("label" to "Сводка (JSON)", "path" to "/api/reports/summary"),
+                mapOf("label" to "Системные настройки", "path" to "/api/system-settings")
             )
         )
     }
@@ -244,7 +394,7 @@ class CrmShellApplicationService(
     }
 
     /**
-     * Вложенная коллекция: записи пациента.
+     * Nested collection: patient appointments.
      */
     fun appointmentMapsForPatient(patientId: UUID): List<Map<String, Any?>> {
         val slots = timeSlotRepository.findAllOrdered().associateBy { it.id }
@@ -271,6 +421,9 @@ class CrmShellApplicationService(
     fun employeesList(): List<Map<String, Any?>> = usersVm()
 
     fun timeSlotsList(): List<Map<String, Any?>> = timeSlotMvcService.listRows().map { slotVm(it) }
+
+    /** For REST controllers: same JSON shape as list items. */
+    fun timeSlotToMap(row: com.bialger.domain.scheduling.mvc.TimeSlotListRow): Map<String, Any?> = slotVm(row)
 
     fun mePayload(): Map<String, Any?> = meVm()
 
@@ -341,6 +494,7 @@ class CrmShellApplicationService(
         branchRepository.findAllOrdered().map { b ->
             mapOf(
                 "id" to b.id.toString(),
+                "organizationId" to b.organizationId.toString(),
                 "name" to b.name,
                 "address" to b.address,
                 "phone" to b.phone,
@@ -350,14 +504,22 @@ class CrmShellApplicationService(
         }
 
     private fun usersVm(): List<Map<String, Any?>> {
-        val branchIds = branchRepository.findAllOrdered().map { it.id.toString() }
+        val allBranchIds = branchRepository.findAllOrdered().map { it.id.toString() }
         return employeeRepository.findAllOrdered().map { e ->
+            val scoped = employeeBranchRepository.findByEmployeeId(e.id).map { it.branchId.toString() }
+            val branchScope = if (scoped.isNotEmpty()) scoped else allBranchIds
+            val roleId = employeeRoleRepository.findByEmployeeId(e.id).firstOrNull()?.roleId
+            val roleEnt = roleId?.let { roleRepository.findById(it).orElse(null) }
+            val roleLabel = roleEnt?.displayName ?: roleEnt?.name ?: "Сотрудник"
+            val roleCode = roleEnt?.name ?: "STAFF"
             mapOf(
                 "id" to e.id.toString(),
                 "login" to (e.email ?: e.id.toString().take(8)),
                 "name" to e.fullName,
-                "role" to "DOCTOR",
-                "branchScope" to branchIds
+                "role" to roleLabel,
+                "roleCode" to roleCode,
+                "isActive" to e.isActive,
+                "branchScope" to branchScope
             )
         }
     }
@@ -388,11 +550,15 @@ class CrmShellApplicationService(
             "endTime" to s.endTime.toString(),
             "employeeName" to row.employeeName,
             "roomName" to row.roomName,
-            "branchName" to row.branchName
+            "branchName" to row.branchName,
+            "isAvailable" to s.isAvailable
         )
     }
 
-    private fun patientVm(p: com.bialger.domain.patient.entity.PatientEntity): Map<String, Any?> =
+    private fun patientVm(
+        p: com.bialger.domain.patient.entity.PatientEntity,
+        iconStrings: List<String> = emptyList()
+    ): Map<String, Any?> =
         mapOf(
             "id" to p.id.toString(),
             "organizationId" to p.organizationId.toString(),
@@ -415,7 +581,7 @@ class CrmShellApplicationService(
             "guardian" to p.guardian,
             "profession" to p.profession,
             "workplace" to p.workplace,
-            "icons" to emptyList<Any>()
+            "icons" to iconStrings
         )
 
     private fun appointmentVm(row: AppointmentListRow, slots: Map<UUID, TimeSlotEntity>): Map<String, Any?> {
@@ -425,12 +591,16 @@ class CrmShellApplicationService(
         return mapOf(
             "id" to a.id.toString(),
             "patientId" to a.patientId.toString(),
+            "patientName" to row.patientName,
+            "employeeName" to row.employeeName,
+            "slotLabel" to row.slotLabel,
             "patient" to mapOf("id" to a.patientId.toString(), "fullName" to row.patientName),
             "doctorId" to a.employeeId.toString(),
             "employeeId" to a.employeeId.toString(),
             "branchId" to a.branchId.toString(),
             "roomId" to a.roomId.toString(),
             "status" to mapStatusToFrontend(a.status),
+            "statusApi" to a.status.name,
             "source" to a.source.name,
             "start" to (start?.toString()),
             "end" to (end?.toString()),
@@ -460,5 +630,129 @@ class CrmShellApplicationService(
         AppointmentStatus.ARRIVED -> "CONFIRMED"
         AppointmentStatus.NO_SHOW -> "CANCELLED"
         AppointmentStatus.CANCELLED -> "CANCELLED"
+    }
+
+    private fun loadPatientIcons(patientIds: List<UUID>): Map<UUID, List<String>> {
+        if (patientIds.isEmpty()) return emptyMap()
+        val tags = patientTagRepository.findByPatientIdIn(patientIds)
+        val types = patientTagTypeRepository.findAllOrdered().associateBy { it.id }
+        return tags.groupBy({ it.patientId }, { tag ->
+            types[tag.tagTypeId]?.icon?.trim()?.takeIf { it.isNotEmpty() } ?: ""
+        }).mapValues { (_, icons) -> icons.filter { it.isNotEmpty() } }
+    }
+
+    private fun paymentEntityVm(p: PaymentEntity): Map<String, Any?> {
+        val total = p.amount.toDouble()
+        val paid = when (p.paymentStatus) {
+            PaymentStatusType.PAID -> total
+            PaymentStatusType.PARTIAL -> total * 0.5
+            else -> 0.0
+        }
+        return mapOf(
+            "id" to p.id.toString(),
+            "appointmentId" to p.appointmentId.toString(),
+            "total" to total,
+            "paid" to paid,
+            "paymentMethod" to p.paymentMethod.name,
+            "paymentStatus" to p.paymentStatus.name,
+            "method" to p.paymentMethod.name,
+            "amount" to p.amount.toPlainString(),
+            "notes" to (p.notes ?: ""),
+            "createdBy" to p.createdBy.toString()
+        )
+    }
+
+    private fun catalogPayload(): Map<String, Any?> = mapOf(
+        "services" to serviceRepository.findAllOrdered().map { s ->
+            mapOf(
+                "id" to s.id.toString(),
+                "name" to s.name,
+                "price" to s.price.toPlainString(),
+                "branchId" to s.branchId?.toString(),
+                "isActive" to s.isActive
+            )
+        },
+        "templates" to templateRepository.findAllOrdered().map { t ->
+            mapOf(
+                "id" to t.id.toString(),
+                "name" to t.name,
+                "type" to t.type.name,
+                "isActive" to t.isActive
+            )
+        },
+        "integrations" to integrationRepository.findAllOrdered().map { i ->
+            mapOf(
+                "id" to i.id.toString(),
+                "name" to i.name,
+                "type" to i.type.name,
+                "isActive" to i.isActive
+            )
+        },
+        "patientTagTypes" to patientTagTypeRepository.findAllOrdered().map { p ->
+            mapOf(
+                "id" to p.id.toString(),
+                "code" to p.code,
+                "name" to p.name,
+                "icon" to (p.icon ?: ""),
+                "isActive" to p.isActive
+            )
+        }
+    )
+
+    private fun buildReportsStats(
+        rows: List<AppointmentListRow>,
+        slots: Map<UUID, TimeSlotEntity>,
+        payments: List<PaymentEntity>
+    ): Map<String, Any?> {
+        val total = rows.size
+        fun cnt(st: AppointmentStatus) = rows.count { it.appointment.status == st }
+        val booked = cnt(AppointmentStatus.SCHEDULED)
+        val confirmed = cnt(AppointmentStatus.CONFIRMED) + cnt(AppointmentStatus.ARRIVED)
+        val canceled = cnt(AppointmentStatus.CANCELLED)
+        val noShow = cnt(AppointmentStatus.NO_SHOW)
+        val online = rows.count { it.appointment.source == AppointmentSource.ONLINE }
+        val frontDesk = rows.count { it.appointment.source == AppointmentSource.MANUAL }
+
+        val durationsMin = rows.mapNotNull { row ->
+            val t = row.appointment.timeSlotId?.let { slots[it] } ?: return@mapNotNull null
+            ChronoUnit.MINUTES.between(
+                t.slotDate.atTime(t.startTime),
+                t.slotDate.atTime(t.endTime)
+            ).toInt()
+        }
+        val avgMin = if (durationsMin.isEmpty()) 0 else durationsMin.average().roundToInt()
+
+        val cancelRate = if (total > 0) (canceled * 100.0 / total) else 0.0
+        val noShowRate = if (total > 0) (noShow * 100.0 / total) else 0.0
+
+        val totalRevenue = payments.fold(java.math.BigDecimal.ZERO) { a, b -> a.add(b.amount) }
+        val paidRevenue = payments.filter { it.paymentStatus == PaymentStatusType.PAID }
+            .fold(java.math.BigDecimal.ZERO) { a, b -> a.add(b.amount) }
+
+        val slotCount = slots.size
+        val scheduleLoad = if (slotCount > 0) {
+            min(100, (total * 100.0 / slotCount).roundToInt())
+        } else {
+            0
+        }
+
+        return mapOf(
+            "totalPatients" to patientMvcService.listAll().size,
+            "totalAppointments" to total,
+            "totalDoctors" to employeeRepository.findAllOrdered().count { it.isActive },
+            "onlineAppointments" to online,
+            "frontDeskAppointments" to frontDesk,
+            "avgAppointmentTime" to avgMin,
+            "cancelRate" to ((cancelRate * 10).roundToInt() / 10.0),
+            "noShowRate" to ((noShowRate * 10).roundToInt() / 10.0),
+            "satisfactionRate" to null,
+            "scheduleLoad" to scheduleLoad,
+            "bookedCount" to booked,
+            "confirmedCount" to confirmed,
+            "canceledCount" to canceled,
+            "noShowCount" to noShow,
+            "totalRevenue" to totalRevenue.toDouble(),
+            "paidRevenue" to paidRevenue.toDouble()
+        )
     }
 }

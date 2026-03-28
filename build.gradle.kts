@@ -102,7 +102,8 @@ tasks.named<ProcessResources>("processResources") {
         include("favicon.ico")
         include("design.png")
     }
-    from("frontend") {
+    // Shell pages: must match js/vue/*-app.js (minimal templates). Root frontend/*.html are standalone UIs and break Vue when embedded.
+    from("frontend/pages") {
         into("static/pages")
         include("*.html")
     }

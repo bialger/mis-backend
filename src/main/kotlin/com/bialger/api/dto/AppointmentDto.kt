@@ -9,7 +9,7 @@ import java.util.UUID
 
 @Serdeable
 @Introspected
-@Schema(description = "Создание записи")
+@Schema(description = "Create appointment")
 data class AppointmentCreateDto(
     @field:NotNull @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     val patientId: UUID,
@@ -25,7 +25,7 @@ data class AppointmentCreateDto(
 
 @Serdeable
 @Introspected
-@Schema(description = "Обновление записи")
+@Schema(description = "Update appointment")
 data class AppointmentUpdateDto(
     @field:NotNull val patientId: UUID,
     @field:NotNull val employeeId: UUID,

@@ -21,19 +21,25 @@ import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import java.util.UUID
 
 @Controller("/api/appointments")
-@Tag(name = "Appointments", description = "Записи на приём")
+@Tag(name = "Appointments", description = "Appointments (schedule and visits)")
 open class AppointmentsApiController(
     private val appointmentMvcService: AppointmentMvcService,
     private val crmShellApplicationService: CrmShellApplicationService
 ) {
 
     @Get(produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Список записей")
+    @Operation(summary = "List appointments")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Page; Link header when multiple pages exist"),
+        ApiResponse(responseCode = "400", description = "Invalid pagination parameters")
+    )
     fun list(
         pageable: Pageable,
         request: HttpRequest<*>
@@ -46,13 +52,22 @@ open class AppointmentsApiController(
     }
 
     @Get("/{id}", produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Запись по id")
+    @Operation(summary = "Get appointment by id")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Appointment"),
+        ApiResponse(responseCode = "404", description = "Not found")
+    )
     fun getOne(@PathVariable id: UUID): Map<String, Any?> =
         crmShellApplicationService.appointmentMapById(id)
             ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
 
     @Post(processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Создать запись")
+    @Operation(summary = "Create appointment")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Created appointment"),
+        ApiResponse(responseCode = "400", description = "Validation or business rule error"),
+        ApiResponse(responseCode = "500", description = "Could not build response after create")
+    )
     open fun create(@Body @Valid dto: AppointmentCreateDto): Map<String, Any?> {
         val e = appointmentMvcService.create(
             patientId = dto.patientId,
@@ -70,7 +85,12 @@ open class AppointmentsApiController(
     }
 
     @Patch("/{id}", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Обновить запись")
+    @Operation(summary = "Update appointment")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Updated appointment"),
+        ApiResponse(responseCode = "400", description = "Validation or business error"),
+        ApiResponse(responseCode = "404", description = "Appointment not found")
+    )
     open fun update(@PathVariable id: UUID, @Body @Valid dto: AppointmentUpdateDto): Map<String, Any?> {
         appointmentMvcService.update(
             id = id,
@@ -89,7 +109,11 @@ open class AppointmentsApiController(
     }
 
     @Delete("/{id}")
-    @Operation(summary = "Удалить запись")
+    @Operation(summary = "Delete appointment")
+    @ApiResponses(
+        ApiResponse(responseCode = "204", description = "Deleted"),
+        ApiResponse(responseCode = "400", description = "Not found or cannot delete")
+    )
     fun delete(@PathVariable id: UUID): HttpResponse<*> {
         appointmentMvcService.delete(id)
         return HttpResponse.noContent<Any>()

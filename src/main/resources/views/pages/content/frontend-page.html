@@ -6,9 +6,18 @@
     <script type="application/json" id="crm-shell-bootstrap" th:if="${crmPageJson != null}" th:utext="${crmPageJson}"></script>
     <script th:if="${crmPageJson != null}">
         (function () {
+            function normPage(p) {
+                if (p != null && typeof p === 'object' && !Array.isArray(p)) return p;
+                return {};
+            }
             var el = document.getElementById('crm-shell-bootstrap');
             if (el && el.textContent) {
-                try { window.__CRM_PAGE__ = JSON.parse(el.textContent); } catch (e) { console.error(e); }
+                try {
+                    var raw = JSON.parse(el.textContent);
+                    window.__CRM_PAGE__ = (window.CrmApi && window.CrmApi.normalizePage)
+                        ? window.CrmApi.normalizePage(raw)
+                        : normPage(raw);
+                } catch (e) { console.error(e); window.__CRM_PAGE__ = {}; }
             }
         })();
     </script>

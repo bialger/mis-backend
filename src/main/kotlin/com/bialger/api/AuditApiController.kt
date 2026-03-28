@@ -10,16 +10,22 @@ import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 
 @Controller("/api/audit-logs")
-@Tag(name = "Audit", description = "Журнал аудита")
+@Tag(name = "Audit", description = "Audit log (action logging)")
 class AuditApiController(
     private val crmShellApplicationService: CrmShellApplicationService
 ) {
 
     @Get(produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Страница записей аудита")
+    @Operation(summary = "Audit log page")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Page; Link header when multiple pages exist"),
+        ApiResponse(responseCode = "400", description = "Invalid pagination")
+    )
     fun list(
         pageable: Pageable,
         request: HttpRequest<*>

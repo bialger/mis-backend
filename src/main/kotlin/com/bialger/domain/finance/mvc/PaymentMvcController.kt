@@ -28,7 +28,9 @@ import org.reactivestreams.Publisher
 import java.net.URI
 import java.time.Instant
 import java.util.UUID
+import io.swagger.v3.oas.annotations.Hidden
 
+@Hidden
 @Controller("/mvc/payments")
 class PaymentMvcController(
     private val paymentMvcService: PaymentMvcService,

@@ -28,4 +28,9 @@ interface AuditLogRepository : CrudRepository<AuditLogEntity, UUID> {
         from: Instant,
         to: Instant
     ): List<AuditLogEntity>
+
+    @Query(
+        "SELECT * FROM audit_log WHERE entity_type = :entityType AND entity_id = :entityId ORDER BY timestamp ASC"
+    )
+    fun findByEntityTypeAndEntityId(entityType: String, entityId: UUID): List<AuditLogEntity>
 }

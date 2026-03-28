@@ -9,7 +9,7 @@ import java.util.UUID
 
 @Serdeable
 @Introspected
-@Schema(description = "Пациент")
+@Schema(description = "Patient")
 data class PatientRestDto(
     val id: String,
     val organizationId: String,
@@ -35,7 +35,7 @@ data class PatientRestDto(
 
 @Serdeable
 @Introspected
-@Schema(description = "Создание пациента")
+@Schema(description = "Create patient")
 data class PatientCreateDto(
     @field:NotNull @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     val organizationId: UUID,
@@ -61,7 +61,7 @@ data class PatientCreateDto(
 
 @Serdeable
 @Introspected
-@Schema(description = "Обновление пациента")
+@Schema(description = "Update patient")
 data class PatientUpdateDto(
     @field:NotNull @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     val organizationId: UUID,

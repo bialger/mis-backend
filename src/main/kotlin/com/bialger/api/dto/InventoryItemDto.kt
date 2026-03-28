@@ -10,7 +10,7 @@ import java.util.UUID
 
 @Serdeable
 @Introspected
-@Schema(description = "Создание позиции склада")
+@Schema(description = "Create inventory item")
 data class InventoryItemCreateDto(
     @field:NotNull val categoryId: UUID,
     @field:NotNull val branchId: UUID,
@@ -24,7 +24,7 @@ data class InventoryItemCreateDto(
 
 @Serdeable
 @Introspected
-@Schema(description = "Обновление позиции склада")
+@Schema(description = "Update inventory item")
 data class InventoryItemUpdateDto(
     @field:NotNull val categoryId: UUID,
     @field:NotNull val branchId: UUID,

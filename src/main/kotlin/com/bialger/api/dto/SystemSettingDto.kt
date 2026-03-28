@@ -8,7 +8,7 @@ import java.util.UUID
 
 @Serdeable
 @Introspected
-@Schema(description = "Создание системной настройки")
+@Schema(description = "Create system setting")
 data class SystemSettingCreateDto(
     val branchId: UUID?,
     @field:NotBlank val key: String,
@@ -18,7 +18,7 @@ data class SystemSettingCreateDto(
 
 @Serdeable
 @Introspected
-@Schema(description = "Обновление системной настройки")
+@Schema(description = "Update system setting")
 data class SystemSettingUpdateDto(
     val branchId: UUID?,
     @field:NotBlank val key: String,

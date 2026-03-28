@@ -21,19 +21,25 @@ import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import java.util.UUID
 
 @Controller("/api/inventory-items")
-@Tag(name = "Inventory", description = "Склад (ТМЦ)")
+@Tag(name = "Inventory", description = "Warehouse and inventory items")
 open class InventoryItemsApiController(
     private val inventoryItemMvcService: InventoryItemMvcService,
     private val crmShellApplicationService: CrmShellApplicationService
 ) {
 
     @Get(produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Список позиций")
+    @Operation(summary = "List items")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Page; Link header when multiple pages exist"),
+        ApiResponse(responseCode = "400", description = "Invalid pagination")
+    )
     fun list(
         pageable: Pageable,
         request: HttpRequest<*>
@@ -46,7 +52,11 @@ open class InventoryItemsApiController(
     }
 
     @Get("/{id}", produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Позиция по id")
+    @Operation(summary = "Get item by id")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Item"),
+        ApiResponse(responseCode = "404", description = "Not found")
+    )
     fun getOne(@PathVariable id: UUID): Map<String, Any?> {
         val row = inventoryItemMvcService.listRows().find { it.item.id == id }
             ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
@@ -63,7 +73,12 @@ open class InventoryItemsApiController(
     }
 
     @Post(processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Создать позицию")
+    @Operation(summary = "Create item")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Created item"),
+        ApiResponse(responseCode = "400", description = "Validation or business error"),
+        ApiResponse(responseCode = "500", description = "Could not build response")
+    )
     open fun create(@Body @Valid dto: InventoryItemCreateDto): Map<String, Any?> {
         val e = inventoryItemMvcService.create(
             categoryId = dto.categoryId,
@@ -80,7 +95,12 @@ open class InventoryItemsApiController(
     }
 
     @Patch("/{id}", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Обновить позицию")
+    @Operation(summary = "Update item")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Updated item"),
+        ApiResponse(responseCode = "400", description = "Validation or business error"),
+        ApiResponse(responseCode = "404", description = "Not found")
+    )
     open fun update(@PathVariable id: UUID, @Body @Valid dto: InventoryItemUpdateDto): Map<String, Any?> {
         inventoryItemMvcService.update(
             id = id,
@@ -108,7 +128,11 @@ open class InventoryItemsApiController(
     }
 
     @Delete("/{id}")
-    @Operation(summary = "Удалить позицию")
+    @Operation(summary = "Delete item")
+    @ApiResponses(
+        ApiResponse(responseCode = "204", description = "Deleted"),
+        ApiResponse(responseCode = "400", description = "Not found or cannot delete")
+    )
     fun delete(@PathVariable id: UUID): HttpResponse<*> {
         inventoryItemMvcService.delete(id)
         return HttpResponse.noContent<Any>()
