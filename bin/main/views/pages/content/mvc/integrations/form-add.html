@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Интеграция</h2>
+    <div th:if="${error != null}" class="m-error-message" th:text="${error}"></div>
+    <form class="m-card m-section" method="post" th:action="@{/mvc/integrations}" accept-charset="UTF-8">
+        <p><label>Тип<br>
+            <select name="type" required>
+                <option th:each="t : ${integrationTypes}" th:value="${t.name()}" th:text="${t.name()}"></option>
+            </select>
+        </label></p>
+        <p><label>Название<br><input name="name" required style="width:100%;max-width:32rem"></label></p>
+        <p><label>Конфиг (JSON)<br><textarea name="config" rows="4" style="width:100%;max-width:40rem"></textarea></label></p>
+        <p><label><input type="checkbox" name="isActive" value="true" checked> Активна</label></p>
+        <p>
+            <button type="submit" class="m-tab-button">Сохранить</button>
+            <a class="m-tab-button" th:href="@{/mvc/integrations}">Отмена</a>
+        </p>
+    </form>
+</section>
+</body>
+</html>

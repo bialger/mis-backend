@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Новый пациент</h2>
+    <div th:if="${error != null}" class="m-error-message" th:text="${error}"></div>
+    <form class="m-card m-section" method="post" th:action="@{/mvc/patients}" accept-charset="UTF-8">
+        <p><label>Организация<br>
+            <select name="organizationId" required style="width:100%;max-width:32rem">
+                <option value="">—</option>
+                <option th:each="o : ${organizations}" th:value="${o.id}" th:text="${o.name}"></option>
+            </select>
+        </label></p>
+        <p><label>Номер карты<br><input name="cardNumber" required style="width:100%;max-width:32rem"></label></p>
+        <p><label>ФИО<br><input name="fullName" required style="width:100%;max-width:32rem"></label></p>
+        <p><label>Пол<br>
+            <select name="gender" style="width:100%;max-width:32rem">
+                <option value="">—</option>
+                <option value="M">М</option>
+                <option value="F">Ж</option>
+            </select>
+        </label></p>
+        <p><label>Дата рождения<br><input name="birthDate" type="date" style="width:100%;max-width:32rem"></label></p>
+        <p><label>Телефон<br><input name="phone" style="width:100%;max-width:32rem"></label></p>
+        <p><label>Email<br><input name="email" type="email" style="width:100%;max-width:32rem"></label></p>
+        <p>
+            <button type="submit" class="m-tab-button">Сохранить</button>
+            <a class="m-tab-button" th:href="@{/mvc/patients}">Отмена</a>
+        </p>
+    </form>
+</section>
+</body>
+</html>

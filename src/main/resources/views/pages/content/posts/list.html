@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Посты</h2>
+    <p class="m-section">Список постов из базы данных; уведомления об изменениях приходят по SSE.</p>
+    <p><a class="m-tab-button" th:href="@{/posts/add}">Добавить пост</a></p>
+
+    <div th:if="${#lists.isEmpty(posts)}" class="m-card">
+        <p>Пока нет ни одного поста.</p>
+    </div>
+
+    <div th:unless="${#lists.isEmpty(posts)}" class="m-card">
+        <ul class="m-card">
+            <li th:each="p : ${posts}">
+                <a th:href="@{/posts/{id}(id=${p.id})}" th:text="${p.title}">Заголовок</a>
+                <span th:text="' — ' + ${p.createdAt}"></span>
+            </li>
+        </ul>
+    </div>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script>
+        (function () {
+            const notyf = new Notyf({ duration: 4500, position: { x: 'right', y: 'bottom' } });
+            let lastSig = '';
+            let lastAt = 0;
+            function showPostToast(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    const sig = (data.type || '') + '|' + String(data.id !== undefined && data.id !== null ? data.id : '') + '|' + (data.title || '');
+                    const now = Date.now();
+                    if (sig === lastSig && now - lastAt < 1200) return;
+                    lastSig = sig;
+                    lastAt = now;
+                    const verb = data.type === 'CREATED' ? 'Создан: ' : data.type === 'UPDATED' ? 'Обновлён: ' : 'Удалён: ';
+                    notyf.open({ type: 'success', message: verb + (data.title || '') });
+                } catch (_) {
+                    const now = Date.now();
+                    if (e.data === lastSig && now - lastAt < 1200) return;
+                    lastSig = e.data;
+                    lastAt = now;
+                    notyf.open({ type: 'info', message: e.data });
+                }
+            }
+            const es = new EventSource('/posts/events');
+            es.addEventListener('open', function () {
+                console.debug('[SSE] connected /posts/events, event: posts-change');
+            });
+            es.addEventListener('error', function (err) {
+                console.error('[SSE] error /posts/events', err);
+            });
+            es.addEventListener('posts-change', showPostToast);
+        })();
+    </script>
+</section>
+</body>
+</html>

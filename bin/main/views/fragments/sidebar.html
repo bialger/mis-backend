@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside class="m-aside" th:fragment="appSidebar(activePage)">
+    <h3>Быстрые действия</h3>
+    <ul>
+        <li><a th:href="@{/patients}" class="is-hoverable-link">Найти пациента</a></li>
+        <li><a th:href="@{/appointments}" class="is-hoverable-link">Создать запись</a></li>
+        <li><a th:href="@{/schedule}" class="is-hoverable-link">Просмотреть расписание</a></li>
+        <li><a th:href="@{/reports}" class="is-hoverable-link">Сформировать отчет</a></li>
+    </ul>
+
+    <h3>Навигация</h3>
+    <ul th:insert="~{fragments/menu :: mainMenu(${activePage})}"></ul>
+
+    <h3>Статус системы</h3>
+    <ul id="sidebar-system-status">
+        <li>База данных: <strong>Активна</strong></li>
+        <li>Последнее обновление: <em th:text="${lastUpdated}">Только что</em></li>
+    </ul>
+</aside>
+</body>
+</html>

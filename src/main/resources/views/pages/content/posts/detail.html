@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <article class="m-card" th:if="${post != null}">
+        <h2 th:text="${post.title}">Заголовок</h2>
+        <p><small th:text="'Создан: ' + ${post.createdAt} + ', обновлён: ' + ${post.updatedAt}"></small></p>
+        <div class="m-section" style="white-space: pre-wrap" th:text="${post.body}">Текст</div>
+        <p class="m-section">
+            <a class="m-tab-button" th:href="@{/posts}">К списку</a>
+            <a class="m-tab-button" th:href="@{/posts/{id}/edit(id=${post.id})}">Редактировать</a>
+            <button type="button" class="m-tab-button" th:attr="data-id=${post.id}" id="post-delete-btn">Удалить</button>
+        </p>
+    </article>
+    <script th:inline="javascript">
+        (function () {
+            const btn = document.getElementById('post-delete-btn');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                const id = btn.getAttribute('data-id');
+                if (!id || !confirm('Удалить этот пост?')) return;
+                fetch('/posts/' + id, { method: 'DELETE', redirect: 'follow' })
+                    .then(function () { window.location.href = '/posts'; });
+            });
+        })();
+    </script>
+</section>
+</body>
+</html>

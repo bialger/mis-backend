@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <div class="m-card" th:if="${item != null}">
+        <h2 th:text="'Зарплата ' + ${item.id}">id</h2>
+        <p>Сотрудник: <span th:text="${item.employeeId}"></span></p>
+        <p>Филиал: <span th:text="${item.branchId}"></span></p>
+        <p>Период: <span th:text="${item.periodStart}"></span> — <span th:text="${item.periodEnd}"></span></p>
+        <p>Сумма: <span th:text="${item.amount}"></span></p>
+        <p>
+            <a class="m-tab-button" th:href="@{/mvc/salary-records}">К списку</a>
+            <a class="m-tab-button" th:href="@{/mvc/salary-records/{id}/edit(id=${item.id})}">Редактировать</a>
+            <button type="button" class="m-tab-button" th:attr="data-id=${item.id}" id="mvc-del">Удалить</button>
+        </p>
+    </div>
+    <script th:inline="javascript">
+        (function () {
+            const b = document.getElementById('mvc-del');
+            if (!b) return;
+            b.addEventListener('click', function () {
+                const id = b.getAttribute('data-id');
+                if (!id || !confirm('Удалить?')) return;
+                fetch('/mvc/salary-records/' + id, { method: 'DELETE' }).then(function () {
+                    window.location.href = '/mvc/salary-records';
+                });
+            });
+        })();
+    </script>
+</section>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="client">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script th:inline="javascript">
+        (function () {
+            const eventsUrl = /*[[${sseEventsPath}]]*/ '';
+            const eventName = /*[[${sseEventName}]]*/ '';
+            if (!eventsUrl || !eventName) return;
+            let notyf = null;
+            try {
+                if (typeof Notyf !== 'undefined') {
+                    notyf = new Notyf({ duration: 4500, position: { x: 'right', y: 'bottom' } });
+                }
+            } catch (e) {
+                console.warn('[SSE] Notyf unavailable', e);
+            }
+            function toast(msg, type) {
+                if (notyf) {
+                    notyf.open({ type: type || 'success', message: msg });
+                } else {
+                    console.info('[SSE]', msg);
+                }
+            }
+            let lastSig = '';
+            let lastAt = 0;
+            function showSseToast(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    const sig = (data.type || '') + '|' + String(data.id !== undefined && data.id !== null ? data.id : '') + '|' + (data.title || '');
+                    const now = Date.now();
+                    if (sig === lastSig && now - lastAt < 1200) return;
+                    lastSig = sig;
+                    lastAt = now;
+                    const verb = data.type === 'CREATED' ? 'Создано: ' : data.type === 'UPDATED' ? 'Обновлено: ' : 'Удалено: ';
+                    toast(verb + (data.title || ''), 'success');
+                    window.dispatchEvent(new CustomEvent('crm-sse-refresh', { detail: { eventName: eventName, data: e.data } }));
+                } catch (_) {
+                    const now = Date.now();
+                    if (e.data === lastSig && now - lastAt < 1200) return;
+                    lastSig = e.data;
+                    lastAt = now;
+                    toast(String(e.data), 'info');
+                    window.dispatchEvent(new CustomEvent('crm-sse-refresh', { detail: { eventName: eventName, data: e.data } }));
+                }
+            }
+            const es = new EventSource(eventsUrl);
+            es.addEventListener('open', function () {
+                console.debug('[SSE] connected', eventsUrl, 'event:', eventName);
+            });
+            es.addEventListener('error', function (err) {
+                console.error('[SSE] error', eventsUrl, err);
+            });
+            es.addEventListener(eventName, showSseToast);
+        })();
+    </script>
+</th:block>
+</body>
+</html>

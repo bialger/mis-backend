@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>MVC — справочники по доменам</h2>
+    <p class="m-section">Серверный CRUD и SSE по каждому поддомену (DDD).</p>
+    <ul class="m-card">
+        <li><a th:href="@{/posts}">Посты (posts)</a></li>
+        <li><a th:href="@{/mvc/organizations}">Core — организации</a></li>
+        <li><a th:href="@{/mvc/branches}">Core — филиалы</a></li>
+        <li><a th:href="@{/mvc/rooms}">Core — кабинеты</a></li>
+        <li><a th:href="@{/mvc/roles}">Core — роли</a></li>
+        <li><a th:href="@{/mvc/permissions}">Core — права доступа</a></li>
+        <li><a th:href="@{/mvc/employees}">Core — сотрудники</a></li>
+        <li><a th:href="@{/mvc/specialties}">Core — специализации</a></li>
+        <li><a th:href="@{/mvc/patient-tag-types}">Patient — типы тегов пациента</a></li>
+        <li><a th:href="@{/mvc/time-slots}">Scheduling — слоты расписания</a></li>
+        <li><a th:href="@{/mvc/medical-services}">Scheduling — услуги (прайс)</a></li>
+        <li><a th:href="@{/mvc/patients}">Patient — пациенты</a></li>
+        <li><a th:href="@{/mvc/appointments}">Scheduling — приёмы</a></li>
+        <li><a th:href="@{/mvc/templates}">Clinical — шаблоны документов</a></li>
+        <li><a th:href="@{/mvc/laboratories}">Laboratory — лаборатории</a></li>
+        <li><a th:href="@{/mvc/lab-tests}">Laboratory — тесты</a></li>
+        <li><a th:href="@{/mvc/inventory-categories}">Inventory — категории склада</a></li>
+        <li><a th:href="@{/mvc/inventory-items}">Inventory — позиции склада</a></li>
+        <li><a th:href="@{/mvc/salary-records}">Finance — записи зарплаты</a></li>
+        <li><a th:href="@{/mvc/payments}">Finance — платежи</a></li>
+        <li><a th:href="@{/mvc/integrations}">Attachment — интеграции</a></li>
+        <li><a th:href="@{/mvc/system-settings}">System — системные настройки</a></li>
+    </ul>
+</section>
+</body>
+</html>

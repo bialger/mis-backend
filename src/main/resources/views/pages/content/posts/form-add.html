@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <h2>Новый пост</h2>
+    <div th:if="${error != null}" class="m-error-message" th:text="${error}"></div>
+    <form class="m-card m-section" method="post" th:action="@{/posts}" accept-charset="UTF-8">
+        <p>
+            <label for="title">Заголовок</label><br>
+            <input id="title" name="title" type="text" required maxlength="500" style="width:100%;max-width:40rem">
+        </p>
+        <p>
+            <label for="body">Текст</label><br>
+            <textarea id="body" name="body" rows="8" style="width:100%;max-width:40rem"></textarea>
+        </p>
+        <p>
+            <button type="submit" class="m-tab-button">Сохранить</button>
+            <a class="m-tab-button" th:href="@{/posts}">Отмена</a>
+        </p>
+    </form>
+</section>
+</body>
+</html>

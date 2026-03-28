@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <div class="m-card" th:if="${item != null}">
+        <h2 th:text="${item.name}">name</h2>
+        <p><strong>Категория:</strong> <span th:text="${categoryName}">—</span></p>
+        <p><strong>Филиал:</strong> <span th:text="${branchName}">—</span></p>
+        <p th:if="${roomName != null and !#strings.isEmpty(roomName)}"><strong>Кабинет:</strong> <span th:text="${roomName}"></span></p>
+        <p th:if="${item.unit != null}"><strong>Ед.:</strong> <span th:text="${item.unit}"></span></p>
+        <p><strong>Кол-во:</strong> <span th:text="${item.quantity}"></span></p>
+        <p th:if="${item.minQuantity != null}"><strong>Мин.:</strong> <span th:text="${item.minQuantity}"></span></p>
+        <p th:if="${item.costPrice != null}"><strong>Себестоимость:</strong> <span th:text="${item.costPrice}"></span></p>
+        <p>
+            <a class="m-tab-button" th:href="@{/mvc/inventory-items}">К списку</a>
+            <a class="m-tab-button" th:href="@{/mvc/inventory-items/{id}/edit(id=${item.id})}">Редактировать</a>
+            <button type="button" class="m-tab-button" th:attr="data-id=${item.id}" id="mvc-del">Удалить</button>
+        </p>
+    </div>
+    <script th:inline="javascript">
+        (function () {
+            const b = document.getElementById('mvc-del');
+            if (!b) return;
+            b.addEventListener('click', function () {
+                const id = b.getAttribute('data-id');
+                if (!id || !confirm('Удалить?')) return;
+                fetch('/mvc/inventory-items/' + id, { method: 'DELETE' }).then(function () {
+                    window.location.href = '/mvc/inventory-items';
+                });
+            });
+        })();
+    </script>
+</section>
+</body>
+</html>

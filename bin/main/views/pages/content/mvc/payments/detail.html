@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="m-dashboard" th:fragment="content">
+    <div class="m-card" th:if="${payment != null}">
+        <h2 th:text="|Платёж ${payment.amount}|">amt</h2>
+        <p><strong>Пациент (по приёму):</strong> <span th:text="${patientName}">—</span></p>
+        <p><strong>Способ:</strong> <span th:text="${payment.paymentMethod}">—</span></p>
+        <p><strong>Статус:</strong> <span th:text="${payment.paymentStatus}">—</span></p>
+        <p><strong>Кто провёл:</strong> <span th:text="${createdByName}">—</span></p>
+        <p th:if="${payment.notes != null}"><strong>Заметки:</strong> <span th:text="${payment.notes}"></span></p>
+        <p>
+            <a class="m-tab-button" th:href="@{/mvc/payments}">К списку</a>
+            <a class="m-tab-button" th:href="@{/mvc/payments/{id}/edit(id=${payment.id})}">Редактировать</a>
+            <button type="button" class="m-tab-button" th:attr="data-id=${payment.id}" id="mvc-del">Удалить</button>
+        </p>
+    </div>
+    <script th:inline="javascript">
+        (function () {
+            const b = document.getElementById('mvc-del');
+            if (!b) return;
+            b.addEventListener('click', function () {
+                const id = b.getAttribute('data-id');
+                if (!id || !confirm('Удалить?')) return;
+                fetch('/mvc/payments/' + id, { method: 'DELETE' }).then(function () {
+                    window.location.href = '/mvc/payments';
+                });
+            });
+        })();
+    </script>
+</section>
+</body>
+</html>
