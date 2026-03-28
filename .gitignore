@@ -33,6 +33,8 @@ replay_pid*
 # Gradle
 .gradle/
 build/
+# IDE / accidental output (not Gradle; Gradle uses build/). Do not commit.
+bin/
 
 # Gradle wrapper must be versioned
 !gradle/wrapper/gradle-wrapper.jar

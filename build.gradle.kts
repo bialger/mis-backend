@@ -14,13 +14,17 @@ plugins {
 version = "0.1"
 group = "com.bialger"
 
-val kotlinVersion=project.properties.get("kotlinVersion")
+val kotlinVersion = project.properties.get("kotlinVersion")
+val micronautVersion = project.properties.get("micronautVersion") as String
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    implementation(platform("io.micronaut.platform:micronaut-platform:$micronautVersion"))
     ksp("io.micronaut:micronaut-http-validation")
+    ksp("io.micronaut.openapi:micronaut-openapi")
     ksp("io.micronaut.serde:micronaut-serde-processor")
     ksp("io.micronaut.data:micronaut-data-processor")
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
@@ -33,6 +37,8 @@ dependencies {
     implementation("io.micronaut.views:micronaut-views-thymeleaf")
     implementation("io.projectreactor:reactor-core:3.6.14")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
+    implementation("io.micronaut.openapi:micronaut-openapi-annotations")
+    implementation("io.micronaut.validation:micronaut-validation")
     implementation("org.mindrot:jbcrypt:0.4")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
@@ -45,7 +51,7 @@ dependencies {
 
 
 application {
-    mainClass = "com.bialger.ApplicationKt"
+    mainClass = "com.bialger.Application"
 }
 java {
     sourceCompatibility = JavaVersion.VERSION_21
