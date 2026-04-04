@@ -24,7 +24,7 @@ import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import java.time.Instant
 import java.util.UUID
 
-@MicronautTest
+@MicronautTest(transactional = false)
 class GraphqlApiTest(
     @param:Client("/") private val client: HttpClient,
     private val objectMapper: ObjectMapper,
@@ -50,7 +50,12 @@ class GraphqlApiTest(
             )
         )
         val req = HttpRequest.POST("/graphql", payload).contentType(MediaType.APPLICATION_JSON)
-        val body = client.toBlocking().retrieve(req)
+        val body = try {
+            client.toBlocking().retrieve(req)
+        } catch (e: HttpClientResponseException) {
+            val responseBody = e.response.getBody(String::class.java).orElse("")
+            throw AssertionError("GraphQL request failed: status=${e.status}, body=$responseBody", e)
+        }
         return objectMapper.readTree(body)
     }
 
@@ -116,14 +121,13 @@ class GraphqlApiTest(
         return id
     }
 
-    fun ensureOrganizationId(): UUID {
-        val existing = organizationRepository.findAllOrdered().firstOrNull()
-        if (existing != null) return existing.id
+    fun createOrganizationId(): UUID {
         val now = Instant.now()
+        val suffix = (System.nanoTime() % 1_000_000).toString().padStart(6, '0')
         val org = OrganizationEntity(
             id = UUID.randomUUID(),
-            name = "GraphQL Test Organization",
-            codeOkpo = "GQL-OKPO-${System.nanoTime()}",
+            name = "GraphQL Test Organization $suffix",
+            codeOkpo = "GQL$suffix",
             codeOkud = "GQL-OKUD",
             address = "Test address",
             createdAt = now
@@ -133,9 +137,7 @@ class GraphqlApiTest(
         return org.id
     }
 
-    fun ensureEmployeeId(): UUID {
-        val existing = employeeRepository.findAllOrdered().firstOrNull()
-        if (existing != null) return existing.id
+    fun createEmployeeId(): UUID {
         val now = Instant.now()
         val employee = EmployeeEntity(
             id = UUID.randomUUID(),
@@ -153,9 +155,7 @@ class GraphqlApiTest(
         return employee.id
     }
 
-    fun ensureBranchId(organizationId: UUID): UUID {
-        val existing = branchRepository.findAllOrdered().firstOrNull()
-        if (existing != null) return existing.id
+    fun createBranchId(organizationId: UUID): UUID {
         val branch = BranchEntity(
             id = UUID.randomUUID(),
             organizationId = organizationId,
@@ -170,9 +170,7 @@ class GraphqlApiTest(
         return branch.id
     }
 
-    fun ensureRoomId(branchId: UUID): UUID {
-        val existing = roomRepository.findAllOrdered().firstOrNull()
-        if (existing != null) return existing.id
+    fun createRoomId(branchId: UUID): UUID {
         val room = RoomEntity(
             id = UUID.randomUUID(),
             branchId = branchId,
@@ -205,6 +203,10 @@ class GraphqlApiTest(
         createdOrganizationIds.clear()
     }
 
+    afterTest {
+        cleanupCreatedTestData()
+    }
+
     afterSpec {
         cleanupCreatedTestData()
     }
@@ -226,7 +228,7 @@ class GraphqlApiTest(
     }
 
     "POST /graphql resolves nested Patient.appointments field" {
-        val orgId = ensureOrganizationId()
+        val orgId = createOrganizationId()
         val patientId = createPatientViaGraphql(orgId.toString(), "GraphQL Resolver Test")
 
         val query = """
@@ -248,10 +250,10 @@ class GraphqlApiTest(
     }
 
     "POST /graphql confirmAppointment mutation updates status" {
-        val organizationId = ensureOrganizationId()
-        val employeeId = ensureEmployeeId()
-        val branchId = ensureBranchId(organizationId)
-        val roomId = ensureRoomId(branchId)
+        val organizationId = createOrganizationId()
+        val employeeId = createEmployeeId()
+        val branchId = createBranchId(organizationId)
+        val roomId = createRoomId(branchId)
 
         val patientId = createPatientViaGraphql(organizationId.toString(), "GraphQL Confirm Test")
         val appointmentId = createAppointmentViaRest(
