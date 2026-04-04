@@ -19,6 +19,7 @@ import io.micronaut.http.HttpRequest
 import io.micronaut.http.MediaType
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
+import io.micronaut.http.client.exceptions.HttpClientResponseException
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import java.time.Instant
 import java.util.UUID
@@ -104,7 +105,12 @@ class GraphqlApiTest(
             )
         )
         val request = HttpRequest.POST("/api/appointments", payload).contentType(MediaType.APPLICATION_JSON)
-        val body = client.toBlocking().retrieve(request)
+        val body = try {
+            client.toBlocking().retrieve(request)
+        } catch (e: HttpClientResponseException) {
+            val responseBody = e.response.getBody(String::class.java).orElse("")
+            throw AssertionError("Could not create appointment via REST: status=${e.status}, body=$responseBody", e)
+        }
         val id = objectMapper.readTree(body).path("id").asText()
         runCatching { createdAppointmentIds += UUID.fromString(id) }
         return id
