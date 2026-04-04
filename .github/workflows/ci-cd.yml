@@ -77,6 +77,28 @@ jobs:
       - name: Run tests and build fat jar
         run: ./gradlew clean test shadowJar -Dorg.gradle.java.home="$JAVA_HOME_21_X64"
 
+      - name: Print test HTML report on failure
+        if: failure()
+        run: |
+          REPORT_PATH="${GITHUB_WORKSPACE}/build/reports/tests/test/index.html"
+          echo "Looking for test report at: ${REPORT_PATH}"
+          if [ -f "${REPORT_PATH}" ]; then
+            cat "${REPORT_PATH}"
+          else
+            echo "Test report index.html not found."
+            echo "Available files under build/reports:"
+            find "${GITHUB_WORKSPACE}/build/reports" -maxdepth 6 -type f || true
+          fi
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: build/reports/tests/test/**
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Prepare deployment artifact
         run: |
           JAR_PATH="$(ls build/libs/*-all.jar | head -n1)"
