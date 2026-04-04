@@ -35,6 +35,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:postgresql")
     implementation("io.micronaut.views:micronaut-views-thymeleaf")
+    implementation("io.micronaut.graphql:micronaut-graphql")
     implementation("io.projectreactor:reactor-core:3.6.14")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
     implementation("io.micronaut.openapi:micronaut-openapi-annotations")
@@ -108,4 +109,3 @@ tasks.named<ProcessResources>("processResources") {
         include("*.html")
     }
 }
-

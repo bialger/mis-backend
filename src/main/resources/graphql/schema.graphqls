@@ -1,0 +1,439 @@
+"""Patient gender."""
+enum GenderType {
+  M
+  F
+}
+
+"""Patient locality type."""
+enum LocalityType {
+  URBAN
+  RURAL
+}
+
+"""Appointment source."""
+enum AppointmentSource {
+  ONLINE
+  MANUAL
+}
+
+"""Appointment lifecycle state."""
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  ARRIVED
+  NO_SHOW
+  CANCELLED
+}
+
+"""Payment method."""
+enum PaymentMethodType {
+  CASH
+  CARD
+  TRANSFER
+  OTHER
+}
+
+"""Payment state."""
+enum PaymentStatusType {
+  PAID
+  PARTIAL
+  DEFERRED
+  NO_CASH_REGISTER
+}
+
+"""Common pagination metadata."""
+type PageInfo {
+  page: Int!
+  size: Int!
+  totalItems: Int!
+  totalPages: Int!
+  hasNext: Boolean!
+  hasPrevious: Boolean!
+}
+
+"""Employee card."""
+type Employee {
+  id: ID!
+  fullName: String!
+  email: String
+  phone: String
+  isActive: Boolean!
+}
+
+"""Branch card."""
+type Branch {
+  id: ID!
+  organizationId: ID!
+  name: String!
+  address: String
+  phone: String
+  isActive: Boolean!
+}
+
+"""Room card."""
+type Room {
+  id: ID!
+  branchId: ID!
+  name: String!
+  description: String
+  isActive: Boolean!
+}
+
+"""Payment attached to an appointment."""
+type Payment {
+  id: ID!
+  appointmentId: ID!
+  amount: String!
+  paymentMethod: PaymentMethodType!
+  paymentStatus: PaymentStatusType!
+  notes: String
+  createdBy: ID!
+  createdAt: String
+}
+
+"""Appointment in schedule."""
+type Appointment {
+  id: ID!
+  patientId: ID!
+  employeeId: ID!
+  timeSlotId: ID
+  branchId: ID!
+  roomId: ID!
+  status: AppointmentStatus!
+  source: AppointmentSource!
+  notes: String
+  createdBy: ID
+  createdAt: String
+  updatedAt: String
+  patient: Patient
+  employee: Employee
+  branch: Branch
+  room: Room
+  payments: [Payment!]!
+}
+
+"""Patient card."""
+type Patient {
+  id: ID!
+  organizationId: ID!
+  cardNumber: String!
+  fullName: String!
+  gender: GenderType
+  birthDate: String
+  phone: String
+  email: String
+  registrationAddress: String
+  residenceAddress: String
+  localityType: LocalityType
+  citizenship: String
+  identityDocument: String
+  omsPolicy: String
+  snils: String
+  insuranceOrganization: String
+  contactPerson: String
+  guardian: String
+  profession: String
+  workplace: String
+  createdAt: String
+  updatedAt: String
+  appointments(page: Int = 0, size: Int = 20): AppointmentPage!
+}
+
+"""Page of patients."""
+type PatientPage {
+  items: [Patient!]!
+  pageInfo: PageInfo!
+}
+
+"""Page of appointments."""
+type AppointmentPage {
+  items: [Appointment!]!
+  pageInfo: PageInfo!
+}
+
+"""Appointment-service relation."""
+type AppointmentService {
+  id: ID!
+}
+
+"""Stored file attachment."""
+type Attachment {
+  id: ID!
+}
+
+"""Audit log entry."""
+type AuditLog {
+  id: ID!
+}
+
+"""Medical diagnosis."""
+type Diagnosis {
+  id: ID!
+}
+
+"""Employee-branch relation."""
+type EmployeeBranch {
+  id: ID!
+}
+
+"""Employee-permission override."""
+type EmployeePermission {
+  id: ID!
+}
+
+"""Employee-role relation."""
+type EmployeeRole {
+  id: ID!
+}
+
+"""Employee-specialty relation."""
+type EmployeeSpecialty {
+  id: ID!
+}
+
+"""Insert sheet linked to a medical record."""
+type InsertSheet {
+  id: ID!
+}
+
+"""External integration settings."""
+type Integration {
+  id: ID!
+}
+
+"""Inventory access rule."""
+type InventoryAccess {
+  id: ID!
+}
+
+"""Inventory category."""
+type InventoryCategory {
+  id: ID!
+}
+
+"""Inventory item."""
+type InventoryItem {
+  id: ID!
+}
+
+"""Inventory operation row."""
+type InventoryOperation {
+  id: ID!
+}
+
+"""Laboratory catalog record."""
+type Laboratory {
+  id: ID!
+}
+
+"""Lab order."""
+type LabOrder {
+  id: ID!
+}
+
+"""Lab order item."""
+type LabOrderItem {
+  id: ID!
+}
+
+"""Lab result."""
+type LabResult {
+  id: ID!
+}
+
+"""Lab test."""
+type LabTest {
+  id: ID!
+}
+
+"""Medical record."""
+type MedicalRecord {
+  id: ID!
+}
+
+"""Notification event."""
+type Notification {
+  id: ID!
+}
+
+"""Organization card."""
+type Organization {
+  id: ID!
+}
+
+"""Patient consent."""
+type PatientConsent {
+  id: ID!
+}
+
+"""Patient tag relation."""
+type PatientTag {
+  id: ID!
+}
+
+"""Patient tag type catalog."""
+type PatientTagType {
+  id: ID!
+}
+
+"""Permission catalog."""
+type Permission {
+  id: ID!
+}
+
+"""Post/news item."""
+type Post {
+  id: ID!
+}
+
+"""Prescription entry."""
+type Prescription {
+  id: ID!
+}
+
+"""Role catalog."""
+type Role {
+  id: ID!
+}
+
+"""Role-permission relation."""
+type RolePermission {
+  id: ID!
+}
+
+"""Salary record."""
+type SalaryRecord {
+  id: ID!
+}
+
+"""Medical service catalog."""
+type Service {
+  id: ID!
+}
+
+"""Service-inventory relation."""
+type ServiceInventoryItem {
+  id: ID!
+}
+
+"""Specialty catalog."""
+type Specialty {
+  id: ID!
+}
+
+"""System setting key-value."""
+type SystemSetting {
+  id: ID!
+}
+
+"""Clinical template."""
+type Template {
+  id: ID!
+}
+
+"""Schedule slot."""
+type TimeSlot {
+  id: ID!
+}
+
+"""Input for patient create or update."""
+input PatientUpsertInput {
+  organizationId: ID!
+  cardNumber: String!
+  fullName: String!
+  gender: GenderType
+  birthDate: String
+  phone: String
+  email: String
+  registrationAddress: String
+  residenceAddress: String
+  localityType: LocalityType
+  citizenship: String
+  identityDocument: String
+  omsPolicy: String
+  snils: String
+  insuranceOrganization: String
+  contactPerson: String
+  guardian: String
+  profession: String
+  workplace: String
+}
+
+type Query {
+  """List patients with pagination and optional text search."""
+  patients(page: Int = 0, size: Int = 20, search: String): PatientPage!
+
+  """Get patient by id."""
+  patient(id: ID!): Patient
+
+  """List appointments with pagination and optional filters."""
+  appointments(page: Int = 0, size: Int = 20, patientId: ID, status: AppointmentStatus): AppointmentPage!
+
+  """Get appointment by id."""
+  appointment(id: ID!): Appointment
+
+  """Read all rows from each mapped entity (id-only projection)."""
+  allAppointmentEntities: [Appointment!]!
+  allAppointmentServiceEntities: [AppointmentService!]!
+  allAttachmentEntities: [Attachment!]!
+  allAuditLogEntities: [AuditLog!]!
+  allBranchEntities: [Branch!]!
+  allDiagnosisEntities: [Diagnosis!]!
+  allEmployeeEntities: [Employee!]!
+  allEmployeeBranchEntities: [EmployeeBranch!]!
+  allEmployeePermissionEntities: [EmployeePermission!]!
+  allEmployeeRoleEntities: [EmployeeRole!]!
+  allEmployeeSpecialtyEntities: [EmployeeSpecialty!]!
+  allInsertSheetEntities: [InsertSheet!]!
+  allIntegrationEntities: [Integration!]!
+  allInventoryAccessEntities: [InventoryAccess!]!
+  allInventoryCategoryEntities: [InventoryCategory!]!
+  allInventoryItemEntities: [InventoryItem!]!
+  allInventoryOperationEntities: [InventoryOperation!]!
+  allLaboratoryEntities: [Laboratory!]!
+  allLabOrderEntities: [LabOrder!]!
+  allLabOrderItemEntities: [LabOrderItem!]!
+  allLabResultEntities: [LabResult!]!
+  allLabTestEntities: [LabTest!]!
+  allMedicalRecordEntities: [MedicalRecord!]!
+  allNotificationEntities: [Notification!]!
+  allOrganizationEntities: [Organization!]!
+  allPatientEntities: [Patient!]!
+  allPatientConsentEntities: [PatientConsent!]!
+  allPatientTagEntities: [PatientTag!]!
+  allPatientTagTypeEntities: [PatientTagType!]!
+  allPaymentEntities: [Payment!]!
+  allPermissionEntities: [Permission!]!
+  allPostEntities: [Post!]!
+  allPrescriptionEntities: [Prescription!]!
+  allRoleEntities: [Role!]!
+  allRolePermissionEntities: [RolePermission!]!
+  allRoomEntities: [Room!]!
+  allSalaryRecordEntities: [SalaryRecord!]!
+  allServiceEntities: [Service!]!
+  allServiceInventoryItemEntities: [ServiceInventoryItem!]!
+  allSpecialtyEntities: [Specialty!]!
+  allSystemSettingEntities: [SystemSetting!]!
+  allTemplateEntities: [Template!]!
+  allTimeSlotEntities: [TimeSlot!]!
+}
+
+type Mutation {
+  """Create patient."""
+  createPatient(input: PatientUpsertInput!): Patient!
+
+  """Update patient."""
+  updatePatient(id: ID!, input: PatientUpsertInput!): Patient!
+
+  """Confirm appointment."""
+  confirmAppointment(appointmentId: ID!): Appointment!
+
+  """Mark appointment as arrived."""
+  markAppointmentArrived(appointmentId: ID!): Appointment!
+
+  """Mark appointment as no-show."""
+  markAppointmentNoShow(appointmentId: ID!): Appointment!
+
+  """Cancel appointment with optional reason."""
+  cancelAppointment(appointmentId: ID!, reason: String): Appointment!
+}
