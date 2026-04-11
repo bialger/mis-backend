@@ -1,0 +1,3 @@
+-- V21: Extend file_type enum with DOCUMENT and COMPRESSED values
+ALTER TYPE file_type ADD VALUE IF NOT EXISTS 'DOCUMENT';
+ALTER TYPE file_type ADD VALUE IF NOT EXISTS 'COMPRESSED';
