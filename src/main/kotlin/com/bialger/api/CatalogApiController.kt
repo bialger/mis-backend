@@ -4,10 +4,13 @@ import com.bialger.api.dto.CatalogIntegrationRestDto
 import com.bialger.api.dto.CatalogServiceRestDto
 import com.bialger.api.dto.CatalogTemplateRestDto
 import com.bialger.api.dto.PatientTagTypeRestDto
+import com.bialger.api.dto.RoleRestDto
 import com.bialger.domain.attachment.repository.IntegrationRepository
 import com.bialger.domain.clinical.repository.TemplateRepository
+import com.bialger.domain.core.repository.RoleRepository
 import com.bialger.domain.patient.repository.PatientTagTypeRepository
 import com.bialger.domain.scheduling.repository.ServiceRepository
+import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -27,7 +30,8 @@ open class CatalogApiController(
     private val serviceRepository: ServiceRepository,
     private val templateRepository: TemplateRepository,
     private val integrationRepository: IntegrationRepository,
-    private val patientTagTypeRepository: PatientTagTypeRepository
+    private val patientTagTypeRepository: PatientTagTypeRepository,
+    private val roleRepository: RoleRepository
 ) {
 
     @Get("/services", produces = [MediaType.APPLICATION_JSON])
@@ -36,8 +40,8 @@ open class CatalogApiController(
         ApiResponse(responseCode = "200", description = "List of services",
             content = [Content(mediaType = "application/json", schema = Schema(implementation = CatalogServiceRestDto::class))])
     )
-    fun services(): List<CatalogServiceRestDto> =
-        serviceRepository.findAllOrdered().map { s ->
+    fun services(): HttpResponse<List<CatalogServiceRestDto>> =
+        HttpResponse.ok(serviceRepository.findAllOrdered().map { s ->
             CatalogServiceRestDto(
                 id = s.id.toString(),
                 name = s.name,
@@ -46,7 +50,7 @@ open class CatalogApiController(
                 branchId = s.branchId?.toString(),
                 isActive = s.isActive
             )
-        }
+        }).header("Cache-Control", "public, max-age=3600")
 
     @Get("/templates", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Document templates")
@@ -54,8 +58,8 @@ open class CatalogApiController(
         ApiResponse(responseCode = "200", description = "List of templates",
             content = [Content(mediaType = "application/json", schema = Schema(implementation = CatalogTemplateRestDto::class))])
     )
-    fun templates(): List<CatalogTemplateRestDto> =
-        templateRepository.findAllOrdered().map { t ->
+    fun templates(): HttpResponse<List<CatalogTemplateRestDto>> =
+        HttpResponse.ok(templateRepository.findAllOrdered().map { t ->
             CatalogTemplateRestDto(
                 id = t.id.toString(),
                 name = t.name,
@@ -65,7 +69,7 @@ open class CatalogApiController(
                 isActive = t.isActive,
                 contentPreview = t.content.take(200)
             )
-        }
+        }).header("Cache-Control", "public, max-age=3600")
 
     @Get("/integrations", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "External integrations")
@@ -101,4 +105,15 @@ open class CatalogApiController(
                 isActive = p.isActive
             )
         }
+
+    @Get("/roles", produces = [MediaType.APPLICATION_JSON])
+    @Operation(summary = "Staff roles (reference)")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "List of roles",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = RoleRestDto::class))])
+    )
+    fun roles(): HttpResponse<List<RoleRestDto>> =
+        HttpResponse.ok(roleRepository.findAllOrdered().map { r ->
+            RoleRestDto(id = r.id.toString(), name = r.name, displayName = r.displayName)
+        }).header("Cache-Control", "public, max-age=3600")
 }
