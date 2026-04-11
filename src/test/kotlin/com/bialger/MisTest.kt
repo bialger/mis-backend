@@ -8,7 +8,7 @@ import io.micronaut.http.client.annotation.Client
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import io.kotest.core.spec.style.StringSpec
 
-@MicronautTest
+@MicronautTest(transactional = false)
 class MisTest(
     private val application: EmbeddedApplication<*>,
     @param:Client("/") private val client: HttpClient
