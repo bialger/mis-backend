@@ -21,6 +21,16 @@ class AuditApiFilterTest(
     private val employeeRepository: EmployeeRepository
 ) : StringSpec({
 
+    val createdEmployeeIds = mutableListOf<UUID>()
+    val createdAuditLogIds = mutableListOf<UUID>()
+
+    afterTest {
+        createdAuditLogIds.forEach { id -> runCatching { auditLogRepository.deleteById(id) } }
+        createdAuditLogIds.clear()
+        createdEmployeeIds.forEach { id -> runCatching { employeeRepository.deleteById(id) } }
+        createdEmployeeIds.clear()
+    }
+
     "GET /api/audit-logs returns paged content" {
         val body = client.toBlocking().retrieve("/api/audit-logs?page=0&size=10")
         val tree = objectMapper.readTree(body)
@@ -29,11 +39,14 @@ class AuditApiFilterTest(
 
     "GET /api/audit-logs?entityType=MEDICAL_RECORD filters by type" {
         val actorId = UUID.randomUUID()
+        createdEmployeeIds += actorId
         employeeRepository.save(
             EmployeeEntity(id = actorId, fullName = "AuditFilterEmp", email = "auditf-${actorId}@test.mis", passwordHash = "x", isActive = true)
         )
+        val auditLogId = UUID.randomUUID()
+        createdAuditLogIds += auditLogId
         auditLogRepository.save(
-            AuditLogEntity(id = UUID.randomUUID(), employeeId = actorId, action = "READ",
+            AuditLogEntity(id = auditLogId, employeeId = actorId, action = "READ",
                 entityType = "MEDICAL_RECORD", timestamp = Instant.now())
         )
 

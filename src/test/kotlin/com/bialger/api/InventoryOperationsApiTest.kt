@@ -1,5 +1,7 @@
 package com.bialger.api
 
+import com.bialger.domain.inventory.repository.InventoryItemRepository
+import com.bialger.domain.inventory.repository.InventoryOperationRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
@@ -17,8 +19,23 @@ import java.util.UUID
 @MicronautTest
 class InventoryOperationsApiTest(
     @param:Client("/") private val client: HttpClient,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val inventoryItemRepository: InventoryItemRepository,
+    private val inventoryOperationRepository: InventoryOperationRepository
 ) : StringSpec({
+
+    val createdItemIds = mutableListOf<UUID>()
+
+    afterTest {
+        createdItemIds.forEach { itemId ->
+            runCatching {
+                inventoryOperationRepository.findByItemId(itemId)
+                    .forEach { inventoryOperationRepository.deleteById(it.id) }
+            }
+            runCatching { inventoryItemRepository.deleteById(itemId) }
+        }
+        createdItemIds.clear()
+    }
 
     /**
      * Creates an inventory item using seeded branch and category via HTTP API.
@@ -52,7 +69,9 @@ class InventoryOperationsApiTest(
         val resp = client.toBlocking().retrieve(
             HttpRequest.POST("/api/inventory-items", body).contentType(MediaType.APPLICATION_JSON)
         )
-        return objectMapper.readTree(resp).path("id").asText()
+        val id = objectMapper.readTree(resp).path("id").asText()
+        runCatching { createdItemIds += UUID.fromString(id) }
+        return id
     }
 
     fun employeeId(): String {

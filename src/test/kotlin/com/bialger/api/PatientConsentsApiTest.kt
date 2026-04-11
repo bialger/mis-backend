@@ -1,5 +1,7 @@
 package com.bialger.api
 
+import com.bialger.domain.patient.repository.PatientConsentRepository
+import com.bialger.domain.patient.repository.PatientRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
@@ -17,8 +19,23 @@ import java.util.UUID
 @MicronautTest
 class PatientConsentsApiTest(
     @param:Client("/") private val client: HttpClient,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val patientRepository: PatientRepository,
+    private val patientConsentRepository: PatientConsentRepository
 ) : StringSpec({
+
+    val createdPatientIds = mutableListOf<UUID>()
+
+    afterTest {
+        createdPatientIds.forEach { patientId ->
+            runCatching {
+                patientConsentRepository.findByPatientId(patientId)
+                    .forEach { patientConsentRepository.deleteById(it.id) }
+            }
+            runCatching { patientRepository.deleteById(patientId) }
+        }
+        createdPatientIds.clear()
+    }
 
     /**
      * Gets the first available organization ID from the branches API (uses seeded data).
@@ -49,7 +66,9 @@ class PatientConsentsApiTest(
         val resp = client.toBlocking().retrieve(
             HttpRequest.POST("/api/patients", body).contentType(MediaType.APPLICATION_JSON)
         )
-        return objectMapper.readTree(resp).path("id").asText()
+        val id = objectMapper.readTree(resp).path("id").asText()
+        runCatching { createdPatientIds += UUID.fromString(id) }
+        return id
     }
 
     "GET /api/patients/{patientId}/consents returns empty list for new patient" {
