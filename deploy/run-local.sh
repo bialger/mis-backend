@@ -20,12 +20,20 @@ cp Dockerfile deploy/docker-context/
 docker build -t mis-backend:local deploy/docker-context
 
 echo "3. Creating .env for local image..."
-cat > deploy/.env << 'ENVFILE'
+# Preserve YC credentials that may already be set in deploy/.env
+_YC_KEY=$(grep -E '^YC_KEY=' deploy/.env 2>/dev/null | cut -d= -f2- || true)
+_YC_SECRET=$(grep -E '^YC_SECRET=' deploy/.env 2>/dev/null | cut -d= -f2- || true)
+_YC_BUCKET=$(grep -E '^YC_BUCKET=' deploy/.env 2>/dev/null | cut -d= -f2- || true)
+
+cat > deploy/.env << ENVFILE
 MIS_IMAGE=mis-backend:local
 APP_PORT=8000
 POSTGRES_USER=mis
 POSTGRES_PASSWORD=mis
 POSTGRES_DB=mis
+YC_KEY=${_YC_KEY}
+YC_SECRET=${_YC_SECRET}
+YC_BUCKET=${_YC_BUCKET}
 ENVFILE
 
 echo "4. Starting Docker Compose..."
