@@ -78,12 +78,12 @@ class PaymentMvcController(
             val apptId = form.appointmentId.parseUuidOrNull() ?: throw IllegalArgumentException("Выберите приём")
             val createdBy = form.createdBy.parseUuidOrNull() ?: throw IllegalArgumentException("Выберите сотрудника")
             val e = paymentMvcService.create(
-                apptId,
-                PaymentMvcService.parseAmount(form.amount),
-                PaymentMvcService.parsePaymentMethod(form.paymentMethod),
-                PaymentMvcService.parsePaymentStatus(form.paymentStatus),
-                form.notes,
-                createdBy
+                appointmentId = apptId,
+                amount = PaymentMvcService.parseAmount(form.amount),
+                paymentMethod = PaymentMvcService.parsePaymentMethod(form.paymentMethod),
+                paymentStatus = PaymentMvcService.parsePaymentStatus(form.paymentStatus),
+                notes = form.notes,
+                createdBy = createdBy
             )
             HttpResponse.seeOther(URI.create("/mvc/payments"))
         } catch (e: Exception) {
@@ -149,13 +149,13 @@ class PaymentMvcController(
             val apptId = form.appointmentId.parseUuidOrNull() ?: throw IllegalArgumentException("Выберите приём")
             val createdBy = form.createdBy.parseUuidOrNull() ?: throw IllegalArgumentException("Выберите сотрудника")
             paymentMvcService.update(
-                id,
-                apptId,
-                PaymentMvcService.parseAmount(form.amount),
-                PaymentMvcService.parsePaymentMethod(form.paymentMethod),
-                PaymentMvcService.parsePaymentStatus(form.paymentStatus),
-                form.notes,
-                createdBy
+                id = id,
+                appointmentId = apptId,
+                amount = PaymentMvcService.parseAmount(form.amount),
+                paymentMethod = PaymentMvcService.parsePaymentMethod(form.paymentMethod),
+                paymentStatus = PaymentMvcService.parsePaymentStatus(form.paymentStatus),
+                notes = form.notes,
+                createdBy = createdBy
             )
             HttpResponse.seeOther(URI.create("/mvc/payments"))
         } catch (e: Exception) {

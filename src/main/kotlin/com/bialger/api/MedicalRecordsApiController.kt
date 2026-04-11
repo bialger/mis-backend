@@ -1,5 +1,6 @@
 package com.bialger.api
 
+import com.bialger.api.dto.MedicalRecordRestDto
 import com.bialger.api.dto.MedicalRecordUpdateDto
 import com.bialger.domain.clinical.mvc.MedicalRecordMvcService
 import io.micronaut.http.HttpStatus
@@ -13,7 +14,10 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import java.util.UUID
@@ -26,20 +30,33 @@ open class MedicalRecordsApiController(
 
     @Get(produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "List medical records for a patient")
-    @ApiResponse(responseCode = "200", description = "List (empty if none)")
-    fun list(@QueryValue patientId: UUID): List<Map<String, Any?>> =
-        medicalRecordMvcService.listMapsByPatientId(patientId)
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "List (empty if none)",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = MedicalRecordRestDto::class))])
+    )
+    fun list(@QueryValue patientId: UUID): List<MedicalRecordRestDto> =
+        medicalRecordMvcService.listByPatientId(patientId)
 
     @Get("/{id}", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Get medical record by id")
-    fun getOne(@PathVariable id: UUID): Map<String, Any?> {
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Medical record",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = MedicalRecordRestDto::class))]),
+        ApiResponse(responseCode = "404", description = "Not found")
+    )
+    fun getOne(@PathVariable id: UUID): MedicalRecordRestDto {
         val e = medicalRecordMvcService.getById(id) ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
-        return medicalRecordMvcService.toMap(e)
+        return medicalRecordMvcService.toDto(e)
     }
 
     @Patch("/{id}", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Update medical record text fields")
-    open fun update(@PathVariable id: UUID, @Body @Valid dto: MedicalRecordUpdateDto): Map<String, Any?> {
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Updated record",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = MedicalRecordRestDto::class))]),
+        ApiResponse(responseCode = "400", description = "Validation error")
+    )
+    open fun update(@PathVariable id: UUID, @Body @Valid dto: MedicalRecordUpdateDto): MedicalRecordRestDto {
         val e = medicalRecordMvcService.update(
             id = id,
             complaints = dto.complaints,
@@ -49,13 +66,17 @@ open class MedicalRecordsApiController(
             procedures = dto.procedures,
             epicrisis = dto.epicrisis
         )
-        return medicalRecordMvcService.toMap(e)
+        return medicalRecordMvcService.toDto(e)
     }
 
     @Post("/ensure/{appointmentId}", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Ensure a medical record exists for an appointment (creates if missing)")
-    open fun ensureForAppointment(@PathVariable appointmentId: UUID): Map<String, Any?> {
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Existing or newly created record",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = MedicalRecordRestDto::class))])
+    )
+    open fun ensureForAppointment(@PathVariable appointmentId: UUID): MedicalRecordRestDto {
         val e = medicalRecordMvcService.ensureForAppointment(appointmentId)
-        return medicalRecordMvcService.toMap(e)
+        return medicalRecordMvcService.toDto(e)
     }
 }

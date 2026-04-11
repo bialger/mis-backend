@@ -1,11 +1,13 @@
 package com.bialger.api
 
 import com.bialger.api.dto.BranchCreateDto
+import com.bialger.api.dto.BranchRestDto
 import com.bialger.api.dto.BranchUpdateDto
 import com.bialger.api.http.PaginationLinks
 import com.bialger.api.util.ApiPage
 import com.bialger.domain.core.mvc.BranchListRow
 import com.bialger.domain.core.mvc.BranchMvcService
+import java.time.LocalTime
 import io.micronaut.data.model.Page
 import io.micronaut.data.model.Pageable
 import io.micronaut.http.HttpRequest
@@ -21,6 +23,8 @@ import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -33,30 +37,36 @@ open class BranchesApiController(
     private val branchMvcService: BranchMvcService
 ) {
 
-    private fun rowToMap(row: BranchListRow): Map<String, Any?> {
+    private fun rowToDto(row: BranchListRow): BranchRestDto {
         val b = row.branch
-        return mapOf(
-            "id" to b.id.toString(),
-            "organizationId" to b.organizationId.toString(),
-            "organizationName" to row.organizationName,
-            "name" to b.name,
-            "address" to b.address,
-            "phone" to b.phone,
-            "isActive" to b.isActive
+        return BranchRestDto(
+            id = b.id.toString(),
+            organizationId = b.organizationId.toString(),
+            organizationName = row.organizationName,
+            name = b.name,
+            address = b.address,
+            phone = b.phone,
+            isActive = b.isActive,
+            startTime = b.startTime.toString(),
+            endTime = b.endTime.toString()
         )
     }
+
+    private fun parseTime(raw: String?): LocalTime? =
+        raw?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
 
     @Get(produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "List branches (paginated)")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Page; Link header when adjacent pages exist"),
+        ApiResponse(responseCode = "200", description = "Page of branches; Link header when adjacent pages exist",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = BranchRestDto::class))]),
         ApiResponse(responseCode = "400", description = "Invalid page/size parameters")
     )
     fun list(
         pageable: Pageable,
         request: HttpRequest<*>
-    ): HttpResponse<Page<Map<String, Any?>>> {
-        val rows = branchMvcService.listRows().map { rowToMap(it) }
+    ): HttpResponse<Page<BranchRestDto>> {
+        val rows = branchMvcService.listRows().map { rowToDto(it) }
         val page = ApiPage.slice(rows, pageable)
         val resp = HttpResponse.ok(page)
         PaginationLinks.appendToResponse(request, page, resp)
@@ -66,53 +76,60 @@ open class BranchesApiController(
     @Get("/{id}", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Get branch by id")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Branch"),
+        ApiResponse(responseCode = "200", description = "Branch",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = BranchRestDto::class))]),
         ApiResponse(responseCode = "404", description = "Not found")
     )
-    fun getOne(@PathVariable id: UUID): Map<String, Any?> {
+    fun getOne(@PathVariable id: UUID): BranchRestDto {
         val row = branchMvcService.listRows().find { it.branch.id == id }
             ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
-        return rowToMap(row)
+        return rowToDto(row)
     }
 
     @Post(processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Create branch")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Created"),
+        ApiResponse(responseCode = "200", description = "Created branch",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = BranchRestDto::class))]),
         ApiResponse(responseCode = "400", description = "Validation error")
     )
-    open fun create(@Body @Valid dto: BranchCreateDto): Map<String, Any?> {
+    open fun create(@Body @Valid dto: BranchCreateDto): BranchRestDto {
         val e = branchMvcService.create(
             organizationId = dto.organizationId,
             name = dto.name,
             address = dto.address,
             phone = dto.phone,
-            isActive = dto.isActive
+            isActive = dto.isActive,
+            startTime = parseTime(dto.startTime) ?: LocalTime.of(8, 0),
+            endTime = parseTime(dto.endTime) ?: LocalTime.of(20, 0)
         )
         val row = branchMvcService.listRows().find { it.branch.id == e.id }
             ?: throw HttpStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not load branch")
-        return rowToMap(row)
+        return rowToDto(row)
     }
 
     @Patch("/{id}", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Update branch")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Updated"),
+        ApiResponse(responseCode = "200", description = "Updated branch",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = BranchRestDto::class))]),
         ApiResponse(responseCode = "400", description = "Validation error"),
         ApiResponse(responseCode = "404", description = "Not found")
     )
-    open fun update(@PathVariable id: UUID, @Body @Valid dto: BranchUpdateDto): Map<String, Any?> {
+    open fun update(@PathVariable id: UUID, @Body @Valid dto: BranchUpdateDto): BranchRestDto {
         branchMvcService.update(
             id = id,
             organizationId = dto.organizationId,
             name = dto.name,
             address = dto.address,
             phone = dto.phone,
-            isActive = dto.isActive
+            isActive = dto.isActive,
+            startTime = parseTime(dto.startTime) ?: LocalTime.of(8, 0),
+            endTime = parseTime(dto.endTime) ?: LocalTime.of(20, 0)
         )
         val row = branchMvcService.listRows().find { it.branch.id == id }
             ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
-        return rowToMap(row)
+        return rowToDto(row)
     }
 
     @Delete("/{id}")

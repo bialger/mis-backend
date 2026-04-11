@@ -1,5 +1,9 @@
 package com.bialger.api
 
+import com.bialger.api.dto.CatalogIntegrationRestDto
+import com.bialger.api.dto.CatalogServiceRestDto
+import com.bialger.api.dto.CatalogTemplateRestDto
+import com.bialger.api.dto.PatientTagTypeRestDto
 import com.bialger.domain.attachment.repository.IntegrationRepository
 import com.bialger.domain.clinical.repository.TemplateRepository
 import com.bialger.domain.patient.repository.PatientTagTypeRepository
@@ -8,6 +12,10 @@ import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 
 /**
@@ -24,57 +32,73 @@ open class CatalogApiController(
 
     @Get("/services", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Medical services (price list)")
-    fun services(): List<Map<String, Any?>> =
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "List of services",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = CatalogServiceRestDto::class))])
+    )
+    fun services(): List<CatalogServiceRestDto> =
         serviceRepository.findAllOrdered().map { s ->
-            mapOf(
-                "id" to s.id.toString(),
-                "name" to s.name,
-                "price" to s.price.toPlainString(),
-                "costPrice" to s.costPrice?.toPlainString(),
-                "branchId" to s.branchId?.toString(),
-                "isActive" to s.isActive
+            CatalogServiceRestDto(
+                id = s.id.toString(),
+                name = s.name,
+                price = s.price.toPlainString(),
+                costPrice = s.costPrice?.toPlainString(),
+                branchId = s.branchId?.toString(),
+                isActive = s.isActive
             )
         }
 
     @Get("/templates", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Document templates")
-    fun templates(): List<Map<String, Any?>> =
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "List of templates",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = CatalogTemplateRestDto::class))])
+    )
+    fun templates(): List<CatalogTemplateRestDto> =
         templateRepository.findAllOrdered().map { t ->
-            mapOf(
-                "id" to t.id.toString(),
-                "name" to t.name,
-                "type" to t.type.name,
-                "specialtyId" to t.specialtyId?.toString(),
-                "employeeId" to t.employeeId?.toString(),
-                "isActive" to t.isActive,
-                "contentPreview" to t.content.take(200)
+            CatalogTemplateRestDto(
+                id = t.id.toString(),
+                name = t.name,
+                type = t.type.name,
+                specialtyId = t.specialtyId?.toString(),
+                employeeId = t.employeeId?.toString(),
+                isActive = t.isActive,
+                contentPreview = t.content.take(200)
             )
         }
 
     @Get("/integrations", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "External integrations")
-    fun integrations(): List<Map<String, Any?>> =
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "List of integrations",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = CatalogIntegrationRestDto::class))])
+    )
+    fun integrations(): List<CatalogIntegrationRestDto> =
         integrationRepository.findAllOrdered().map { i ->
-            mapOf(
-                "id" to i.id.toString(),
-                "name" to i.name,
-                "type" to i.type.name,
-                "isActive" to i.isActive,
-                "config" to (i.config ?: "")
+            CatalogIntegrationRestDto(
+                id = i.id.toString(),
+                name = i.name,
+                type = i.type.name,
+                isActive = i.isActive,
+                config = i.config ?: ""
             )
         }
 
     @Get("/patient-tag-types", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Patient tag / icon types")
-    fun patientTagTypes(): List<Map<String, Any?>> =
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "List of tag types",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = PatientTagTypeRestDto::class))])
+    )
+    fun patientTagTypes(): List<PatientTagTypeRestDto> =
         patientTagTypeRepository.findAllOrdered().map { p ->
-            mapOf(
-                "id" to p.id.toString(),
-                "code" to p.code,
-                "name" to p.name,
-                "icon" to (p.icon ?: ""),
-                "description" to (p.description ?: ""),
-                "isActive" to p.isActive
+            PatientTagTypeRestDto(
+                id = p.id.toString(),
+                code = p.code,
+                name = p.name,
+                icon = p.icon ?: "",
+                description = p.description ?: "",
+                isActive = p.isActive
             )
         }
 }

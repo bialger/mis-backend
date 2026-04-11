@@ -33,4 +33,73 @@ interface AuditLogRepository : CrudRepository<AuditLogEntity, UUID> {
         "SELECT * FROM audit_log WHERE entity_type = :entityType AND entity_id = :entityId ORDER BY timestamp ASC"
     )
     fun findByEntityTypeAndEntityId(entityType: String, entityId: UUID): List<AuditLogEntity>
+
+    // --- Filtered paged queries for API ---
+
+    @Query(
+        value = """
+            SELECT * FROM audit_log
+            WHERE entity_type = :entityType
+              AND timestamp >= :from
+              AND timestamp <= :to
+            ORDER BY timestamp DESC
+        """,
+        countQuery = """
+            SELECT COUNT(*) FROM audit_log
+            WHERE entity_type = :entityType
+              AND timestamp >= :from
+              AND timestamp <= :to
+        """
+    )
+    fun findByEntityTypeAndDateRange(
+        entityType: String,
+        from: Instant,
+        to: Instant,
+        pageable: Pageable
+    ): Page<AuditLogEntity>
+
+    @Query(
+        value = """
+            SELECT * FROM audit_log
+            WHERE entity_type = :entityType
+              AND entity_id = :entityId
+              AND timestamp >= :from
+              AND timestamp <= :to
+            ORDER BY timestamp DESC
+        """,
+        countQuery = """
+            SELECT COUNT(*) FROM audit_log
+            WHERE entity_type = :entityType
+              AND entity_id = :entityId
+              AND timestamp >= :from
+              AND timestamp <= :to
+        """
+    )
+    fun findByEntityTypeAndEntityIdAndDateRange(
+        entityType: String,
+        entityId: UUID,
+        from: Instant,
+        to: Instant,
+        pageable: Pageable
+    ): Page<AuditLogEntity>
+
+    @Query(
+        value = """
+            SELECT * FROM audit_log
+            WHERE timestamp >= :from
+              AND timestamp <= :to
+            ORDER BY timestamp DESC
+        """,
+        countQuery = """
+            SELECT COUNT(*) FROM audit_log
+            WHERE timestamp >= :from
+              AND timestamp <= :to
+        """
+    )
+    fun findByDateRange(from: Instant, to: Instant, pageable: Pageable): Page<AuditLogEntity>
+
+    // --- Retention cleanup ---
+
+    @Query("DELETE FROM audit_log WHERE timestamp < :cutoff")
+    fun deleteOlderThan(cutoff: Instant): Long
 }

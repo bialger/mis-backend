@@ -1,11 +1,14 @@
 package com.bialger.api
 
 import com.bialger.api.dto.EmployeeCreateDto
+import com.bialger.api.dto.EmployeeRestDto
 import com.bialger.api.dto.EmployeeUpdateDto
 import com.bialger.api.http.PaginationLinks
 import com.bialger.api.util.ApiPage
 import com.bialger.domain.core.entity.EmployeeEntity
 import com.bialger.domain.core.mvc.EmployeeMvcService
+import com.bialger.domain.core.repository.RoleRepository
+import java.util.UUID as JavaUUID
 import io.micronaut.data.model.Page
 import io.micronaut.data.model.Pageable
 import io.micronaut.http.HttpRequest
@@ -21,6 +24,8 @@ import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -30,43 +35,49 @@ import java.util.UUID
 @Controller("/api/employees")
 @Tag(name = "Employees", description = "Employees (staff accounts)")
 open class EmployeesApiController(
-    private val employeeMvcService: EmployeeMvcService
+    private val employeeMvcService: EmployeeMvcService,
+    private val roleRepository: RoleRepository
 ) {
 
-    private fun toMap(e: EmployeeEntity): Map<String, Any?> {
+    private fun toDto(e: EmployeeEntity): EmployeeRestDto {
         val x = employeeMvcService.formExtras(e.id)
         @Suppress("UNCHECKED_CAST")
         val specIds = (x["employeeSpecialtyIds"] as? Set<String>)?.toList() ?: emptyList()
         @Suppress("UNCHECKED_CAST")
         val branchIds = (x["employeeBranchIds"] as? Set<String>)?.toList() ?: emptyList()
         val roleId = (x["employeeRoleId"] as? String)?.trim().orEmpty()
-        return mapOf(
-            "id" to e.id.toString(),
-            "fullName" to e.fullName,
-            "email" to e.email,
-            "phone" to e.phone,
-            "isActive" to e.isActive,
-            "login" to (e.email ?: e.id.toString().take(8)),
-            "name" to e.fullName,
-            "role" to roleId,
-            "roleId" to roleId,
-            "specialtyIds" to specIds,
-            "branchIds" to branchIds,
-            "branchScope" to branchIds
+        val roleEnt = runCatching { JavaUUID.fromString(roleId) }.getOrNull()
+            ?.let { roleRepository.findById(it).orElse(null) }
+        return EmployeeRestDto(
+            id = e.id.toString(),
+            fullName = e.fullName,
+            email = e.email,
+            phone = e.phone,
+            isActive = e.isActive,
+            login = e.email ?: e.id.toString().take(8),
+            name = e.fullName,
+            role = roleId,
+            roleId = roleId,
+            roleCode = roleEnt?.name ?: "",
+            roleLabel = roleEnt?.displayName ?: roleEnt?.name ?: "",
+            specialtyIds = specIds,
+            branchIds = branchIds,
+            branchScope = branchIds
         )
     }
 
     @Get(produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "List employees (paginated)")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Page; Link header when adjacent pages exist"),
+        ApiResponse(responseCode = "200", description = "Page of employees; Link header when adjacent pages exist",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = EmployeeRestDto::class))]),
         ApiResponse(responseCode = "400", description = "Invalid page/size parameters")
     )
     fun list(
         pageable: Pageable,
         request: HttpRequest<*>
-    ): HttpResponse<Page<Map<String, Any?>>> {
-        val rows = employeeMvcService.listAll().map { toMap(it) }
+    ): HttpResponse<Page<EmployeeRestDto>> {
+        val rows = employeeMvcService.listAll().map { toDto(it) }
         val page = ApiPage.slice(rows, pageable)
         val resp = HttpResponse.ok(page)
         PaginationLinks.appendToResponse(request, page, resp)
@@ -75,14 +86,24 @@ open class EmployeesApiController(
 
     @Get("/{id}", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Get employee by id")
-    fun getOne(@PathVariable id: UUID): Map<String, Any?> {
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Employee",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = EmployeeRestDto::class))]),
+        ApiResponse(responseCode = "404", description = "Not found")
+    )
+    fun getOne(@PathVariable id: UUID): EmployeeRestDto {
         val e = employeeMvcService.getById(id) ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
-        return toMap(e)
+        return toDto(e)
     }
 
     @Post(processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Create employee")
-    open fun create(@Body @Valid dto: EmployeeCreateDto): Map<String, Any?> {
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Created employee",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = EmployeeRestDto::class))]),
+        ApiResponse(responseCode = "400", description = "Validation or business error")
+    )
+    open fun create(@Body @Valid dto: EmployeeCreateDto): EmployeeRestDto {
         val e = employeeMvcService.create(
             fullName = dto.fullName,
             email = dto.email,
@@ -93,12 +114,18 @@ open class EmployeesApiController(
             branchIds = dto.branchIds,
             roleId = dto.roleId
         )
-        return toMap(e)
+        return toDto(e)
     }
 
     @Patch("/{id}", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Update employee")
-    open fun update(@PathVariable id: UUID, @Body @Valid dto: EmployeeUpdateDto): Map<String, Any?> {
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Updated employee",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = EmployeeRestDto::class))]),
+        ApiResponse(responseCode = "400", description = "Validation or business error"),
+        ApiResponse(responseCode = "404", description = "Not found")
+    )
+    open fun update(@PathVariable id: UUID, @Body @Valid dto: EmployeeUpdateDto): EmployeeRestDto {
         val e = employeeMvcService.update(
             id = id,
             fullName = dto.fullName,
@@ -110,7 +137,7 @@ open class EmployeesApiController(
             branchIds = dto.branchIds,
             roleId = dto.roleId
         )
-        return toMap(e)
+        return toDto(e)
     }
 
     @Delete("/{id}")

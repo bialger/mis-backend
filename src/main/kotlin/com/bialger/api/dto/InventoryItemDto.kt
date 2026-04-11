@@ -10,6 +10,20 @@ import java.util.UUID
 
 @Serdeable
 @Introspected
+@Schema(description = "Inventory item response")
+data class InventoryItemRestDto(
+    val id: String,
+    val name: String,
+    val branchId: String,
+    val quantity: BigDecimal,
+    val unit: String?,
+    val minQuantity: BigDecimal?,
+    val categoryName: String,
+    val roomName: String
+)
+
+@Serdeable
+@Introspected
 @Schema(description = "Create inventory item")
 data class InventoryItemCreateDto(
     @field:NotNull val categoryId: UUID,

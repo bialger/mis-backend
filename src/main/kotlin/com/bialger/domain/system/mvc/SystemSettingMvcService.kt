@@ -17,26 +17,88 @@ class SystemSettingMvcService(
 
     /**
      * Values for [com.bialger.web.CrmShellPageData]: same keys as OpenAPI `Permissions` and `mock_api.json` → `me.permissions`.
+     *
+     * Role-specific defaults are applied first, then the DB can further restrict (but not elevate) permissions
+     * for roles that are locked down (SYSADMIN, DOCTOR, NURSE).
+     * For HEAD and ADMIN the DB settings take full effect.
      */
-    fun resolvePermissions(): Map<String, Any> {
+    fun resolvePermissions(roleCode: String = "ADMIN"): Map<String, Any> {
         val byKey = systemSettingRepository.findAllOrdered().associateBy { it.key }
-        fun bool(key: String, default: Boolean): Boolean {
-            val raw = byKey[key]?.value?.trim()?.lowercase() ?: return default
+
+        fun rawBool(key: String): Boolean? {
+            val raw = byKey[key]?.value?.trim()?.lowercase() ?: return null
             return when (raw) {
-                "true", "1", "yes", "да" -> true
-                "false", "0", "no", "нет" -> false
-                else -> raw.toBooleanStrictOrNull() ?: default
+                "true", "1", "yes" -> true
+                "false", "0", "no" -> false
+                else -> raw.toBooleanStrictOrNull()
             }
         }
-        fun int(key: String, default: Int): Int =
-            byKey[key]?.value?.trim()?.toIntOrNull() ?: default
+
+        fun rawInt(key: String): Int? = byKey[key]?.value?.trim()?.toIntOrNull()
+
+        val roleDefaults: Map<String, Any> = when (roleCode) {
+            "SYSADMIN" -> mapOf(
+                "canViewFinance" to false,
+                "canEditFinance" to false,
+                "canViewInventory" to false,
+                "canWriteInventory" to false,
+                "canManualEgiszSend" to false,
+                "canEditBackdateDays" to 0
+            )
+            "DOCTOR" -> mapOf(
+                "canViewFinance" to false,
+                "canEditFinance" to false,
+                "canViewInventory" to false,
+                "canWriteInventory" to false,
+                "canManualEgiszSend" to false,
+                "canEditBackdateDays" to 60
+            )
+            "NURSE" -> mapOf(
+                "canViewFinance" to false,
+                "canEditFinance" to false,
+                "canViewInventory" to true,
+                "canWriteInventory" to false,
+                "canManualEgiszSend" to false,
+                "canEditBackdateDays" to 0
+            )
+            "HEAD" -> mapOf(
+                "canViewFinance" to true,
+                "canEditFinance" to true,
+                "canViewInventory" to true,
+                "canWriteInventory" to true,
+                "canManualEgiszSend" to true,
+                "canEditBackdateDays" to 3650
+            )
+            else -> mapOf(
+                "canViewFinance" to true,
+                "canEditFinance" to true,
+                "canViewInventory" to true,
+                "canWriteInventory" to true,
+                "canManualEgiszSend" to false,
+                "canEditBackdateDays" to 0
+            )
+        }
+
+        val lockedRoles = setOf("SYSADMIN", "DOCTOR", "NURSE", "ADMIN", "HEAD")
+        fun bool(key: String): Boolean {
+            val roleDefault = roleDefaults[key] as? Boolean ?: true
+            if (roleCode in lockedRoles) return roleDefault
+            return rawBool(key) ?: roleDefault
+        }
+
+        fun int(key: String): Int {
+            val roleDefault = roleDefaults[key] as? Int ?: 0
+            if (roleCode in lockedRoles) return roleDefault
+            return rawInt(key) ?: roleDefault
+        }
+
         return mapOf(
-            "canViewFinance" to bool("canViewFinance", true),
-            "canEditFinance" to bool("canEditFinance", true),
-            "canViewInventory" to bool("canViewInventory", true),
-            "canWriteInventory" to bool("canWriteInventory", true),
-            "canManualEgiszSend" to bool("canManualEgiszSend", true),
-            "canEditBackdateDays" to int("canEditBackdateDays", 0)
+            "canViewFinance" to bool("canViewFinance"),
+            "canEditFinance" to bool("canEditFinance"),
+            "canViewInventory" to bool("canViewInventory"),
+            "canWriteInventory" to bool("canWriteInventory"),
+            "canManualEgiszSend" to bool("canManualEgiszSend"),
+            "canEditBackdateDays" to int("canEditBackdateDays")
         )
     }
 

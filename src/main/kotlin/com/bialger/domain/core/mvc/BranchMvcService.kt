@@ -6,6 +6,7 @@ import com.bialger.domain.core.repository.OrganizationRepository
 import com.bialger.web.DomainMvcEventEmitter
 import jakarta.inject.Singleton
 import java.time.Instant
+import java.time.LocalTime
 import java.util.UUID
 
 data class BranchListRow(
@@ -39,7 +40,9 @@ class BranchMvcService(
         name: String,
         address: String?,
         phone: String?,
-        isActive: Boolean
+        isActive: Boolean,
+        startTime: LocalTime = LocalTime.of(8, 0),
+        endTime: LocalTime = LocalTime.of(20, 0)
     ): BranchEntity {
         require(organizationRepository.findById(organizationId).isPresent) { "Организация не найдена" }
         val n = name.trim()
@@ -52,7 +55,9 @@ class BranchMvcService(
             address = address?.trim()?.takeIf { it.isNotEmpty() },
             phone = phone?.trim()?.takeIf { it.isNotEmpty() },
             isActive = isActive,
-            createdAt = Instant.now()
+            createdAt = Instant.now(),
+            startTime = startTime,
+            endTime = endTime
         )
         branchRepository.save(entity)
         domainMvcEventEmitter.notify(TOPIC, "CREATED", id.toString(), entity.name)
@@ -65,7 +70,9 @@ class BranchMvcService(
         name: String,
         address: String?,
         phone: String?,
-        isActive: Boolean
+        isActive: Boolean,
+        startTime: LocalTime = LocalTime.of(8, 0),
+        endTime: LocalTime = LocalTime.of(20, 0)
     ): BranchEntity {
         require(organizationRepository.findById(organizationId).isPresent) { "Организация не найдена" }
         val existing = branchRepository.findById(id).orElseThrow { IllegalArgumentException("Not found") }
@@ -76,7 +83,9 @@ class BranchMvcService(
             name = n,
             address = address?.trim()?.takeIf { it.isNotEmpty() },
             phone = phone?.trim()?.takeIf { it.isNotEmpty() },
-            isActive = isActive
+            isActive = isActive,
+            startTime = startTime,
+            endTime = endTime
         )
         branchRepository.update(updated)
         domainMvcEventEmitter.notify(TOPIC, "UPDATED", id.toString(), updated.name)

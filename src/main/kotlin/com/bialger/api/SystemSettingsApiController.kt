@@ -1,9 +1,11 @@
 package com.bialger.api
 
 import com.bialger.api.dto.SystemSettingCreateDto
+import com.bialger.api.dto.SystemSettingRestDto
 import com.bialger.api.dto.SystemSettingUpdateDto
 import com.bialger.api.http.PaginationLinks
 import com.bialger.api.util.ApiPage
+import com.bialger.domain.system.entity.SystemSettingEntity
 import com.bialger.domain.system.mvc.SystemSettingMvcService
 import io.micronaut.data.model.Page
 import io.micronaut.data.model.Pageable
@@ -20,6 +22,8 @@ import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -32,25 +36,26 @@ open class SystemSettingsApiController(
     private val systemSettingMvcService: SystemSettingMvcService
 ) {
 
+    private fun toDto(s: SystemSettingEntity): SystemSettingRestDto = SystemSettingRestDto(
+        id = s.id.toString(),
+        branchId = s.branchId?.toString() ?: "",
+        key = s.key,
+        value = s.value ?: "",
+        description = s.description ?: ""
+    )
+
     @Get(produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "List settings (paginated)")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Page; Link header when adjacent pages exist"),
+        ApiResponse(responseCode = "200", description = "Page; Link header when adjacent pages exist",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = SystemSettingRestDto::class))]),
         ApiResponse(responseCode = "400", description = "Invalid page/size parameters")
     )
     fun list(
         pageable: Pageable,
         request: HttpRequest<*>
-    ): HttpResponse<Page<Map<String, Any?>>> {
-        val all = systemSettingMvcService.listAll().map { s ->
-            mapOf<String, Any?>(
-                "id" to s.id.toString(),
-                "branchId" to (s.branchId?.toString() ?: ""),
-                "key" to s.key,
-                "value" to (s.value ?: ""),
-                "description" to (s.description ?: "")
-            )
-        }
+    ): HttpResponse<Page<SystemSettingRestDto>> {
+        val all = systemSettingMvcService.listAll().map { toDto(it) }
         val page = ApiPage.slice(all, pageable)
         val resp = HttpResponse.ok(page)
         PaginationLinks.appendToResponse(request, page, resp)
@@ -60,49 +65,40 @@ open class SystemSettingsApiController(
     @Get("/{id}", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Get setting by id")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Found setting"),
+        ApiResponse(responseCode = "200", description = "Found setting",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = SystemSettingRestDto::class))]),
         ApiResponse(responseCode = "404", description = "Not found")
     )
-    fun getOne(@PathVariable id: UUID): Map<String, Any?> {
+    fun getOne(@PathVariable id: UUID): SystemSettingRestDto {
         val s = systemSettingMvcService.getById(id) ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
-        return mapOf(
-            "id" to s.id.toString(),
-            "branchId" to (s.branchId?.toString() ?: ""),
-            "key" to s.key,
-            "value" to (s.value ?: ""),
-            "description" to (s.description ?: "")
-        )
+        return toDto(s)
     }
 
     @Post(processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Create setting")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Created record"),
+        ApiResponse(responseCode = "200", description = "Created record",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = SystemSettingRestDto::class))]),
         ApiResponse(responseCode = "400", description = "Request body validation error")
     )
-    open fun create(@Body @Valid dto: SystemSettingCreateDto): Map<String, Any?> {
+    open fun create(@Body @Valid dto: SystemSettingCreateDto): SystemSettingRestDto {
         val e = systemSettingMvcService.create(
             branchId = dto.branchId,
             key = dto.key,
             value = dto.value,
             description = dto.description
         )
-        return mapOf(
-            "id" to e.id.toString(),
-            "branchId" to (e.branchId?.toString() ?: ""),
-            "key" to e.key,
-            "value" to (e.value ?: ""),
-            "description" to (e.description ?: "")
-        )
+        return toDto(e)
     }
 
     @Patch("/{id}", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Update setting")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Updated record"),
+        ApiResponse(responseCode = "200", description = "Updated record",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = SystemSettingRestDto::class))]),
         ApiResponse(responseCode = "400", description = "Validation error, duplicate key, or record not found")
     )
-    open fun update(@PathVariable id: UUID, @Body @Valid dto: SystemSettingUpdateDto): Map<String, Any?> {
+    open fun update(@PathVariable id: UUID, @Body @Valid dto: SystemSettingUpdateDto): SystemSettingRestDto {
         val e = systemSettingMvcService.update(
             id = id,
             branchId = dto.branchId,
@@ -110,13 +106,7 @@ open class SystemSettingsApiController(
             value = dto.value,
             description = dto.description
         )
-        return mapOf(
-            "id" to e.id.toString(),
-            "branchId" to (e.branchId?.toString() ?: ""),
-            "key" to e.key,
-            "value" to (e.value ?: ""),
-            "description" to (e.description ?: "")
-        )
+        return toDto(e)
     }
 
     @Delete("/{id}")

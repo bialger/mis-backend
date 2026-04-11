@@ -17,6 +17,8 @@ data class PatientRestDto(
     val fullName: String,
     val gender: String?,
     val birthDate: String?,
+    /** Alias for birthDate — kept for SPA backward compatibility. */
+    val dob: String?,
     val phone: String?,
     val email: String?,
     val registrationAddress: String?,
@@ -30,7 +32,9 @@ data class PatientRestDto(
     val contactPerson: String?,
     val guardian: String?,
     val profession: String?,
-    val workplace: String?
+    val workplace: String?,
+    /** Tag-type icon strings; populated only in shell payloads, empty list in plain REST responses. */
+    val icons: List<String> = emptyList()
 )
 
 @Serdeable

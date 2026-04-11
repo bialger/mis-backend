@@ -53,7 +53,8 @@ class PaymentMvcService(
         paymentMethod: PaymentMethodType,
         paymentStatus: PaymentStatusType,
         notes: String?,
-        createdBy: UUID
+        createdBy: UUID,
+        paidAmount: BigDecimal? = null
     ): PaymentEntity {
         require(appointmentRepository.findById(appointmentId).isPresent) { "Приём не найден" }
         require(employeeRepository.findById(createdBy).isPresent) { "Сотрудник не найден" }
@@ -62,6 +63,7 @@ class PaymentMvcService(
             id = id,
             appointmentId = appointmentId,
             amount = amount,
+            paidAmount = paidAmount,
             paymentMethod = paymentMethod,
             paymentStatus = paymentStatus,
             notes = notes?.trim()?.takeIf { it.isNotEmpty() },
@@ -80,7 +82,8 @@ class PaymentMvcService(
         paymentMethod: PaymentMethodType,
         paymentStatus: PaymentStatusType,
         notes: String?,
-        createdBy: UUID
+        createdBy: UUID,
+        paidAmount: BigDecimal? = null
     ): PaymentEntity {
         require(appointmentRepository.findById(appointmentId).isPresent) { "Приём не найден" }
         require(employeeRepository.findById(createdBy).isPresent) { "Сотрудник не найден" }
@@ -88,6 +91,7 @@ class PaymentMvcService(
         val updated = existing.copy(
             appointmentId = appointmentId,
             amount = amount,
+            paidAmount = paidAmount ?: existing.paidAmount,
             paymentMethod = paymentMethod,
             paymentStatus = paymentStatus,
             notes = notes?.trim()?.takeIf { it.isNotEmpty() },

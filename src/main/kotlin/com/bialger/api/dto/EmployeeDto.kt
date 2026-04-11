@@ -9,6 +9,30 @@ import java.util.UUID
 
 @Serdeable
 @Introspected
+@Schema(description = "Employee response")
+data class EmployeeRestDto(
+    val id: String,
+    val fullName: String,
+    val email: String?,
+    val phone: String?,
+    val isActive: Boolean,
+    val login: String,
+    /** Alias for fullName — kept for SPA backward compatibility. */
+    val name: String,
+    /** Role UUID (primary key of the role entity). */
+    val role: String,
+    val roleId: String,
+    /** Role code name, e.g. "HEAD", "DOCTOR". */
+    val roleCode: String,
+    /** Role display label, e.g. "Главврач". */
+    val roleLabel: String,
+    val specialtyIds: List<String>,
+    val branchIds: List<String>,
+    val branchScope: List<String>
+)
+
+@Serdeable
+@Introspected
 @Schema(description = "Create employee (staff)")
 data class EmployeeCreateDto(
     @field:NotBlank val fullName: String,

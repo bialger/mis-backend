@@ -9,6 +9,28 @@ import java.util.UUID
 
 @Serdeable
 @Introspected
+@Schema(description = "Appointment response")
+data class AppointmentRestDto(
+    val id: String,
+    val patientId: String,
+    val patientName: String?,
+    val employeeName: String?,
+    val slotLabel: String?,
+    val doctorId: String,
+    val employeeId: String,
+    val branchId: String,
+    val roomId: String,
+    val status: String,
+    val statusApi: String,
+    val source: String,
+    val start: String?,
+    val end: String?,
+    val notes: String?,
+    val timeSlotId: String?
+)
+
+@Serdeable
+@Introspected
 @Schema(description = "Create appointment")
 data class AppointmentCreateDto(
     @field:NotNull @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)

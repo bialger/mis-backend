@@ -9,6 +9,51 @@ import java.util.UUID
 
 @Serdeable
 @Introspected
+@Schema(description = "Branch response")
+data class BranchRestDto(
+    val id: String,
+    val organizationId: String,
+    val organizationName: String?,
+    val name: String,
+    val address: String?,
+    val phone: String?,
+    val isActive: Boolean,
+    val startTime: String,
+    val endTime: String
+)
+
+@Serdeable
+@Introspected
+@Schema(description = "Room response")
+data class RoomRestDto(
+    val id: String,
+    val branchId: String,
+    val name: String,
+    val description: String?,
+    val isActive: Boolean
+)
+
+@Serdeable
+@Introspected
+@Schema(description = "Time slot response")
+data class TimeSlotRestDto(
+    val id: String,
+    val employeeId: String,
+    val branchId: String,
+    val roomId: String,
+    val slotDate: String,
+    val start: String?,
+    val end: String?,
+    val startTime: String,
+    val endTime: String,
+    val employeeName: String?,
+    val roomName: String?,
+    val branchName: String?,
+    val isAvailable: Boolean
+)
+
+@Serdeable
+@Introspected
 @Schema(description = "Create branch")
 data class BranchCreateDto(
     @field:NotNull @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)
@@ -16,7 +61,9 @@ data class BranchCreateDto(
     @field:NotBlank val name: String,
     val address: String? = null,
     val phone: String? = null,
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val startTime: String? = null,
+    val endTime: String? = null
 )
 
 @Serdeable
@@ -27,7 +74,9 @@ data class BranchUpdateDto(
     @field:NotBlank val name: String,
     val address: String? = null,
     val phone: String? = null,
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val startTime: String? = null,
+    val endTime: String? = null
 )
 
 @Serdeable

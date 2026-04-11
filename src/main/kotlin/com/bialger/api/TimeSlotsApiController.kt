@@ -1,10 +1,11 @@
 package com.bialger.api
 
 import com.bialger.api.dto.TimeSlotCreateDto
+import com.bialger.api.dto.TimeSlotRestDto
 import com.bialger.api.dto.TimeSlotUpdateDto
 import com.bialger.api.http.PaginationLinks
 import com.bialger.api.util.ApiPage
-import com.bialger.application.shell.CrmShellApplicationService
+import com.bialger.domain.scheduling.mvc.TimeSlotListRow
 import com.bialger.domain.scheduling.mvc.TimeSlotMvcService
 import io.micronaut.data.model.Page
 import io.micronaut.data.model.Pageable
@@ -21,30 +22,55 @@ import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import java.time.ZoneId
 import java.util.UUID
 
 @Controller("/api/time-slots")
 @Tag(name = "TimeSlots", description = "Schedule time slots (online booking)")
 open class TimeSlotsApiController(
-    private val timeSlotMvcService: TimeSlotMvcService,
-    private val crmShellApplicationService: CrmShellApplicationService
+    private val timeSlotMvcService: TimeSlotMvcService
 ) {
+
+    private fun rowToDto(row: TimeSlotListRow): TimeSlotRestDto {
+        val s = row.slot
+        val zone = ZoneId.systemDefault()
+        val start = s.slotDate.atTime(s.startTime).atZone(zone).toInstant()
+        val end = s.slotDate.atTime(s.endTime).atZone(zone).toInstant()
+        return TimeSlotRestDto(
+            id = s.id.toString(),
+            employeeId = s.employeeId.toString(),
+            branchId = s.branchId.toString(),
+            roomId = s.roomId.toString(),
+            slotDate = s.slotDate.toString(),
+            start = start.toString(),
+            end = end.toString(),
+            startTime = s.startTime.toString(),
+            endTime = s.endTime.toString(),
+            employeeName = row.employeeName,
+            roomName = row.roomName,
+            branchName = row.branchName,
+            isAvailable = s.isAvailable
+        )
+    }
 
     @Get(produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "List time slots (paginated)")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Page; Link header when adjacent pages exist"),
+        ApiResponse(responseCode = "200", description = "Page of time slots; Link header when adjacent pages exist",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = TimeSlotRestDto::class))]),
         ApiResponse(responseCode = "400", description = "Invalid page/size parameters")
     )
     fun list(
         pageable: Pageable,
         request: HttpRequest<*>
-    ): HttpResponse<Page<Map<String, Any?>>> {
-        val rows = crmShellApplicationService.timeSlotsList()
+    ): HttpResponse<Page<TimeSlotRestDto>> {
+        val rows = timeSlotMvcService.listRows().map { rowToDto(it) }
         val page = ApiPage.slice(rows, pageable)
         val resp = HttpResponse.ok(page)
         PaginationLinks.appendToResponse(request, page, resp)
@@ -54,22 +80,24 @@ open class TimeSlotsApiController(
     @Get("/{id}", produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Get time slot by id")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Time slot"),
+        ApiResponse(responseCode = "200", description = "Time slot",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = TimeSlotRestDto::class))]),
         ApiResponse(responseCode = "404", description = "Not found")
     )
-    fun getOne(@PathVariable id: UUID): Map<String, Any?> {
+    fun getOne(@PathVariable id: UUID): TimeSlotRestDto {
         val row = timeSlotMvcService.listRows().find { it.slot.id == id }
             ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
-        return crmShellApplicationService.timeSlotToMap(row)
+        return rowToDto(row)
     }
 
     @Post(processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Create time slot")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Created"),
+        ApiResponse(responseCode = "200", description = "Created time slot",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = TimeSlotRestDto::class))]),
         ApiResponse(responseCode = "400", description = "Validation error")
     )
-    open fun create(@Body @Valid dto: TimeSlotCreateDto): Map<String, Any?> {
+    open fun create(@Body @Valid dto: TimeSlotCreateDto): TimeSlotRestDto {
         val slotDate = TimeSlotMvcService.parseLocalDate(dto.slotDate)
         val startTime = TimeSlotMvcService.parseLocalTime(dto.startTime)
         val endTime = TimeSlotMvcService.parseLocalTime(dto.endTime)
@@ -84,17 +112,18 @@ open class TimeSlotsApiController(
         )
         val row = timeSlotMvcService.listRows().find { it.slot.id == e.id }
             ?: throw HttpStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not load time slot")
-        return crmShellApplicationService.timeSlotToMap(row)
+        return rowToDto(row)
     }
 
     @Patch("/{id}", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "Update time slot")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Updated"),
+        ApiResponse(responseCode = "200", description = "Updated time slot",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = TimeSlotRestDto::class))]),
         ApiResponse(responseCode = "400", description = "Validation error"),
         ApiResponse(responseCode = "404", description = "Not found")
     )
-    open fun update(@PathVariable id: UUID, @Body @Valid dto: TimeSlotUpdateDto): Map<String, Any?> {
+    open fun update(@PathVariable id: UUID, @Body @Valid dto: TimeSlotUpdateDto): TimeSlotRestDto {
         val slotDate = TimeSlotMvcService.parseLocalDate(dto.slotDate)
         val startTime = TimeSlotMvcService.parseLocalTime(dto.startTime)
         val endTime = TimeSlotMvcService.parseLocalTime(dto.endTime)
@@ -110,7 +139,7 @@ open class TimeSlotsApiController(
         )
         val row = timeSlotMvcService.listRows().find { it.slot.id == id }
             ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
-        return crmShellApplicationService.timeSlotToMap(row)
+        return rowToDto(row)
     }
 
     @Delete("/{id}")

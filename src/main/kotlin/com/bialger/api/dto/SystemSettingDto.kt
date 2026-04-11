@@ -8,6 +8,17 @@ import java.util.UUID
 
 @Serdeable
 @Introspected
+@Schema(description = "System setting response")
+data class SystemSettingRestDto(
+    val id: String,
+    val branchId: String,
+    val key: String,
+    val value: String,
+    val description: String
+)
+
+@Serdeable
+@Introspected
 @Schema(description = "Create system setting")
 data class SystemSettingCreateDto(
     val branchId: UUID?,
