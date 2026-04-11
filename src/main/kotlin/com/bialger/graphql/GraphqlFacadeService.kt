@@ -1,18 +1,26 @@
 package com.bialger.graphql
 
+import com.bialger.api.dto.RoomRestDto
 import com.bialger.domain.core.entity.BranchEntity
 import com.bialger.domain.core.entity.EmployeeEntity
 import com.bialger.domain.core.entity.RoomEntity
 import com.bialger.domain.core.repository.BranchRepository
+import com.bialger.domain.core.repository.EmployeeBranchRepository
 import com.bialger.domain.core.repository.EmployeeRepository
+import com.bialger.domain.core.repository.EmployeeRoleRepository
+import com.bialger.domain.core.repository.OrganizationRepository
+import com.bialger.domain.core.repository.RoleRepository
 import com.bialger.domain.core.repository.RoomRepository
 import com.bialger.domain.finance.entity.PaymentEntity
 import com.bialger.domain.finance.repository.PaymentRepository
 import com.bialger.domain.patient.entity.PatientEntity
 import com.bialger.domain.patient.mvc.PatientMvcService
 import com.bialger.domain.scheduling.entity.AppointmentEntity
+import com.bialger.domain.scheduling.entity.TimeSlotEntity
 import com.bialger.domain.scheduling.enums.AppointmentStatus
+import com.bialger.domain.scheduling.mvc.AppointmentListRow
 import com.bialger.domain.scheduling.mvc.AppointmentMvcService
+import com.bialger.domain.scheduling.repository.TimeSlotRepository
 import com.bialger.graphql.model.AppointmentGql
 import com.bialger.graphql.model.AppointmentPageGql
 import com.bialger.graphql.model.BranchGql
@@ -22,8 +30,9 @@ import com.bialger.graphql.model.PatientGql
 import com.bialger.graphql.model.PatientPageGql
 import com.bialger.graphql.model.PatientUpsertInput
 import com.bialger.graphql.model.PaymentGql
-import com.bialger.graphql.model.RoomGql
 import jakarta.inject.Singleton
+import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 
 @Singleton
@@ -32,8 +41,13 @@ class GraphqlFacadeService(
     private val appointmentMvcService: AppointmentMvcService,
     private val paymentRepository: PaymentRepository,
     private val employeeRepository: EmployeeRepository,
+    private val employeeRoleRepository: EmployeeRoleRepository,
+    private val roleRepository: RoleRepository,
+    private val employeeBranchRepository: EmployeeBranchRepository,
     private val branchRepository: BranchRepository,
-    private val roomRepository: RoomRepository
+    private val organizationRepository: OrganizationRepository,
+    private val roomRepository: RoomRepository,
+    private val timeSlotRepository: TimeSlotRepository
 ) {
 
     fun listPatients(page: Int, size: Int, search: String?): PatientPageGql {
@@ -50,37 +64,49 @@ class GraphqlFacadeService(
     fun listAppointments(page: Int, size: Int, patientId: UUID?, status: AppointmentStatus?): AppointmentPageGql {
         val p = sanitizePage(page)
         val s = sanitizeSize(size)
+        val slots = loadSlotsMap()
         val all = appointmentMvcService.listRows()
             .asSequence()
-            .map { it.appointment }
-            .filter { patientId == null || it.patientId == patientId }
-            .filter { status == null || it.status == status }
-            .map(::toAppointmentGql)
+            .filter { patientId == null || it.appointment.patientId == patientId }
+            .filter { status == null || it.appointment.status == status }
+            .map { toAppointmentGql(it, slots) }
             .toList()
         return toAppointmentPage(all, p, s)
     }
 
-    fun listAllAppointments(): List<AppointmentGql> =
-        appointmentMvcService.listRows().map { toAppointmentGql(it.appointment) }
+    fun listAllAppointments(): List<AppointmentGql> {
+        val slots = loadSlotsMap()
+        return appointmentMvcService.listRows().map { toAppointmentGql(it, slots) }
+    }
 
     fun listAllPayments(): List<PaymentGql> = paymentRepository.findAllOrdered().map(::toPaymentGql)
 
-    fun listAllEmployees(): List<EmployeeGql> = employeeRepository.findAllOrdered().map(::toEmployeeGql)
+    fun listAllEmployees(): List<EmployeeGql> {
+        val allBranchIds = branchRepository.findAllOrdered().map { it.id.toString() }
+        return employeeRepository.findAllOrdered().map { toEmployeeGql(it, allBranchIds) }
+    }
 
-    fun listAllBranches(): List<BranchGql> = branchRepository.findAllOrdered().map(::toBranchGql)
+    fun listAllBranches(): List<BranchGql> {
+        val orgMap = organizationRepository.findAllOrdered().associate { it.id to it.name }
+        return branchRepository.findAllOrdered().map { toBranchGql(it, orgMap) }
+    }
 
-    fun listAllRooms(): List<RoomGql> = roomRepository.findAllOrdered().map(::toRoomGql)
+    fun listAllRooms(): List<RoomRestDto> = roomRepository.findAllOrdered().map(::toRoomDto)
 
-    fun getAppointment(id: UUID): AppointmentGql? = appointmentMvcService.getById(id)?.let(::toAppointmentGql)
+    fun getAppointment(id: UUID): AppointmentGql? {
+        val slots = loadSlotsMap()
+        return appointmentMvcService.listRows().find { it.appointment.id == id }
+            ?.let { toAppointmentGql(it, slots) }
+    }
 
     fun listPatientAppointments(patientId: UUID, page: Int, size: Int): AppointmentPageGql {
         val p = sanitizePage(page)
         val s = sanitizeSize(size)
+        val slots = loadSlotsMap()
         val all = appointmentMvcService.listRows()
             .asSequence()
-            .map { it.appointment }
-            .filter { it.patientId == patientId }
-            .map(::toAppointmentGql)
+            .filter { it.appointment.patientId == patientId }
+            .map { toAppointmentGql(it, slots) }
             .toList()
         return toAppointmentPage(all, p, s)
     }
@@ -140,17 +166,17 @@ class GraphqlFacadeService(
 
     fun confirmAppointment(appointmentId: UUID): AppointmentGql {
         val updated = appointmentMvcService.updateStatus(appointmentId, AppointmentStatus.CONFIRMED)
-        return toAppointmentGql(updated)
+        return toAppointmentGqlBasic(updated)
     }
 
     fun markAppointmentArrived(appointmentId: UUID): AppointmentGql {
         val updated = appointmentMvcService.updateStatus(appointmentId, AppointmentStatus.ARRIVED)
-        return toAppointmentGql(updated)
+        return toAppointmentGqlBasic(updated)
     }
 
     fun markAppointmentNoShow(appointmentId: UUID): AppointmentGql {
         val updated = appointmentMvcService.updateStatus(appointmentId, AppointmentStatus.NO_SHOW)
-        return toAppointmentGql(updated)
+        return toAppointmentGqlBasic(updated)
     }
 
     fun cancelAppointment(appointmentId: UUID, reason: String?): AppointmentGql {
@@ -173,26 +199,30 @@ class GraphqlFacadeService(
             notes = mergedNotes,
             createdBy = current.createdBy
         )
-        return toAppointmentGql(updated)
+        return toAppointmentGqlBasic(updated)
     }
 
     fun appointmentPatient(parent: AppointmentGql): PatientGql? =
         parseUuid(parent.patientId, "patientId").let { getPatient(it) }
 
-    fun appointmentEmployee(parent: AppointmentGql): EmployeeGql? =
-        employeeRepository.findById(parseUuid(parent.employeeId, "employeeId"))
+    fun appointmentEmployee(parent: AppointmentGql): EmployeeGql? {
+        val allBranchIds = branchRepository.findAllOrdered().map { it.id.toString() }
+        return employeeRepository.findById(parseUuid(parent.employeeId, "employeeId"))
             .orElse(null)
-            ?.let(::toEmployeeGql)
+            ?.let { toEmployeeGql(it, allBranchIds) }
+    }
 
-    fun appointmentBranch(parent: AppointmentGql): BranchGql? =
-        branchRepository.findById(parseUuid(parent.branchId, "branchId"))
+    fun appointmentBranch(parent: AppointmentGql): BranchGql? {
+        val orgMap = organizationRepository.findAllOrdered().associate { it.id to it.name }
+        return branchRepository.findById(parseUuid(parent.branchId, "branchId"))
             .orElse(null)
-            ?.let(::toBranchGql)
+            ?.let { toBranchGql(it, orgMap) }
+    }
 
-    fun appointmentRoom(parent: AppointmentGql): RoomGql? =
+    fun appointmentRoom(parent: AppointmentGql): RoomRestDto? =
         roomRepository.findById(parseUuid(parent.roomId, "roomId"))
             .orElse(null)
-            ?.let(::toRoomGql)
+            ?.let(::toRoomDto)
 
     fun appointmentPayments(parent: AppointmentGql): List<PaymentGql> =
         paymentRepository.findByAppointmentId(parseUuid(parent.id, "appointmentId"))
@@ -250,7 +280,31 @@ class GraphqlFacadeService(
         updatedAt = entity.updatedAt?.toString()
     )
 
-    private fun toAppointmentGql(entity: AppointmentEntity): AppointmentGql = AppointmentGql(
+    private fun toAppointmentGql(row: AppointmentListRow, slots: Map<UUID, TimeSlotEntity>): AppointmentGql {
+        val a = row.appointment
+        return AppointmentGql(
+            id = a.id.toString(),
+            patientId = a.patientId.toString(),
+            employeeId = a.employeeId.toString(),
+            timeSlotId = a.timeSlotId?.toString(),
+            branchId = a.branchId.toString(),
+            roomId = a.roomId.toString(),
+            status = a.status,
+            source = a.source,
+            notes = a.notes,
+            createdBy = a.createdBy?.toString(),
+            createdAt = a.createdAt?.toString(),
+            updatedAt = a.updatedAt?.toString(),
+            patientName = row.patientName,
+            employeeName = row.employeeName,
+            slotLabel = row.slotLabel,
+            start = resolveStart(a, slots)?.toString(),
+            end = resolveEnd(a, slots)?.toString()
+        )
+    }
+
+    /** Used by mutation responses where re-fetching the full row is unnecessary. */
+    private fun toAppointmentGqlBasic(entity: AppointmentEntity): AppointmentGql = AppointmentGql(
         id = entity.id.toString(),
         patientId = entity.patientId.toString(),
         employeeId = entity.employeeId.toString(),
@@ -262,13 +316,19 @@ class GraphqlFacadeService(
         notes = entity.notes,
         createdBy = entity.createdBy?.toString(),
         createdAt = entity.createdAt?.toString(),
-        updatedAt = entity.updatedAt?.toString()
+        updatedAt = entity.updatedAt?.toString(),
+        patientName = null,
+        employeeName = null,
+        slotLabel = null,
+        start = entity.createdAt?.toString(),
+        end = null
     )
 
     private fun toPaymentGql(entity: PaymentEntity): PaymentGql = PaymentGql(
         id = entity.id.toString(),
         appointmentId = entity.appointmentId.toString(),
         amount = entity.amount.toPlainString(),
+        paidAmount = entity.paidAmount?.toPlainString(),
         paymentMethod = entity.paymentMethod,
         paymentStatus = entity.paymentStatus,
         notes = entity.notes,
@@ -276,30 +336,61 @@ class GraphqlFacadeService(
         createdAt = entity.createdAt?.toString()
     )
 
-    private fun toEmployeeGql(entity: EmployeeEntity): EmployeeGql = EmployeeGql(
-        id = entity.id.toString(),
-        fullName = entity.fullName,
-        email = entity.email,
-        phone = entity.phone,
-        isActive = entity.isActive
-    )
+    private fun toEmployeeGql(entity: EmployeeEntity, allBranchIds: List<String>): EmployeeGql {
+        val roleLink = employeeRoleRepository.findByEmployeeId(entity.id).firstOrNull()
+        val roleEnt = roleLink?.roleId?.let { roleRepository.findById(it).orElse(null) }
+        val scoped = employeeBranchRepository.findByEmployeeId(entity.id).map { it.branchId.toString() }
+        val branchScope = if (scoped.isNotEmpty()) scoped else allBranchIds
+        return EmployeeGql(
+            id = entity.id.toString(),
+            fullName = entity.fullName,
+            email = entity.email,
+            phone = entity.phone,
+            isActive = entity.isActive,
+            login = entity.email ?: entity.id.toString().take(8),
+            roleCode = roleEnt?.name ?: "STAFF",
+            roleLabel = roleEnt?.displayName ?: roleEnt?.name ?: "Сотрудник",
+            branchScope = branchScope
+        )
+    }
 
-    private fun toBranchGql(entity: BranchEntity): BranchGql = BranchGql(
+    private fun toBranchGql(entity: BranchEntity, orgMap: Map<UUID, String>): BranchGql = BranchGql(
         id = entity.id.toString(),
         organizationId = entity.organizationId.toString(),
+        organizationName = orgMap[entity.organizationId],
         name = entity.name,
         address = entity.address,
         phone = entity.phone,
-        isActive = entity.isActive
+        isActive = entity.isActive,
+        startTime = entity.startTime.toString(),
+        endTime = entity.endTime.toString()
     )
 
-    private fun toRoomGql(entity: RoomEntity): RoomGql = RoomGql(
+    private fun toRoomDto(entity: RoomEntity): RoomRestDto = RoomRestDto(
         id = entity.id.toString(),
         branchId = entity.branchId.toString(),
         name = entity.name,
         description = entity.description,
         isActive = entity.isActive
     )
+
+    private fun loadSlotsMap(): Map<UUID, TimeSlotEntity> =
+        timeSlotRepository.findAllOrdered().associateBy { it.id }
+
+    private fun resolveStart(a: AppointmentEntity, slots: Map<UUID, TimeSlotEntity>): Instant? {
+        val t = a.timeSlotId?.let { slots[it] } ?: return a.createdAt
+        return t.slotDate.atTime(t.startTime).atZone(ZoneId.systemDefault()).toInstant()
+    }
+
+    private fun resolveEnd(a: AppointmentEntity, slots: Map<UUID, TimeSlotEntity>): Instant? {
+        val t = a.timeSlotId?.let { slots[it] }
+        return if (t != null) {
+            t.slotDate.atTime(t.endTime).atZone(ZoneId.systemDefault()).toInstant()
+        } else {
+            val s = a.createdAt ?: return null
+            Instant.ofEpochMilli(s.toEpochMilli() + 30 * 60_000L)
+        }
+    }
 
     private fun parseUuid(raw: String, field: String): UUID =
         runCatching { UUID.fromString(raw) }

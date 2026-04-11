@@ -58,16 +58,23 @@ type Employee {
   email: String
   phone: String
   isActive: Boolean!
+  login: String!
+  roleCode: String!
+  roleLabel: String!
+  branchScope: [ID!]!
 }
 
 """Branch card."""
 type Branch {
   id: ID!
   organizationId: ID!
+  organizationName: String
   name: String!
   address: String
   phone: String
   isActive: Boolean!
+  startTime: String!
+  endTime: String!
 }
 
 """Room card."""
@@ -84,6 +91,7 @@ type Payment {
   id: ID!
   appointmentId: ID!
   amount: String!
+  paidAmount: String
   paymentMethod: PaymentMethodType!
   paymentStatus: PaymentStatusType!
   notes: String
@@ -105,6 +113,11 @@ type Appointment {
   createdBy: ID
   createdAt: String
   updatedAt: String
+  patientName: String
+  employeeName: String
+  slotLabel: String
+  start: String
+  end: String
   patient: Patient
   employee: Employee
   branch: Branch

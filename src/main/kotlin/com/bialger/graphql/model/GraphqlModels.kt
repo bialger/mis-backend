@@ -63,13 +63,19 @@ data class AppointmentGql(
     val notes: String?,
     val createdBy: String?,
     val createdAt: String?,
-    val updatedAt: String?
+    val updatedAt: String?,
+    val patientName: String?,
+    val employeeName: String?,
+    val slotLabel: String?,
+    val start: String?,
+    val end: String?
 )
 
 data class PaymentGql(
     val id: String,
     val appointmentId: String,
     val amount: String,
+    val paidAmount: String?,
     val paymentMethod: PaymentMethodType,
     val paymentStatus: PaymentStatusType,
     val notes: String?,
@@ -82,25 +88,27 @@ data class EmployeeGql(
     val fullName: String,
     val email: String?,
     val phone: String?,
-    val isActive: Boolean
+    val isActive: Boolean,
+    val login: String,
+    val roleCode: String,
+    val roleLabel: String,
+    val branchScope: List<String>
 )
 
 data class BranchGql(
     val id: String,
     val organizationId: String,
+    val organizationName: String?,
     val name: String,
     val address: String?,
     val phone: String?,
-    val isActive: Boolean
+    val isActive: Boolean,
+    val startTime: String,
+    val endTime: String
 )
 
-data class RoomGql(
-    val id: String,
-    val branchId: String,
-    val name: String,
-    val description: String?,
-    val isActive: Boolean
-)
+/** RoomGql was removed — GraphqlFacadeService now returns RoomRestDto directly,
+ *  which is structurally identical to the former RoomGql. */
 
 data class PatientUpsertInput(
     val organizationId: String,

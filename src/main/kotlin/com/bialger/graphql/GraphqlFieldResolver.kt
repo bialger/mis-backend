@@ -1,12 +1,12 @@
 package com.bialger.graphql
 
+import com.bialger.api.dto.RoomRestDto
 import com.bialger.graphql.model.AppointmentGql
 import com.bialger.graphql.model.AppointmentPageGql
 import com.bialger.graphql.model.BranchGql
 import com.bialger.graphql.model.EmployeeGql
 import com.bialger.graphql.model.PatientGql
 import com.bialger.graphql.model.PaymentGql
-import com.bialger.graphql.model.RoomGql
 import graphql.schema.DataFetcher
 import graphql.schema.DataFetchingEnvironment
 import jakarta.inject.Singleton
@@ -36,7 +36,7 @@ class GraphqlFieldResolver(
         facade.appointmentBranch(env.sourceAs())
     }
 
-    val appointmentRoom: DataFetcher<RoomGql?> = DataFetcher { env ->
+    val appointmentRoom: DataFetcher<RoomRestDto?> = DataFetcher { env ->
         facade.appointmentRoom(env.sourceAs())
     }
 
