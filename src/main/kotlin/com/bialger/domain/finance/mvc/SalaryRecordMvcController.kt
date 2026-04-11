@@ -24,7 +24,9 @@ import java.math.BigDecimal
 import java.net.URI
 import java.time.LocalDate
 import java.util.UUID
+import io.swagger.v3.oas.annotations.Hidden
 
+@Hidden
 @Controller("/mvc/salary-records")
 class SalaryRecordMvcController(
     private val salaryRecordMvcService: SalaryRecordMvcService,

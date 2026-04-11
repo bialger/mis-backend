@@ -77,6 +77,74 @@ jobs:
       - name: Run tests and build fat jar
         run: ./gradlew clean test shadowJar -Dorg.gradle.java.home="$JAVA_HOME_21_X64"
 
+      - name: Print test HTML report on failure
+        if: failure()
+        run: |
+          REPORT_PATH="${GITHUB_WORKSPACE}/build/reports/tests/test/index.html"
+          echo "Looking for test report at: ${REPORT_PATH}"
+          if [ -f "${REPORT_PATH}" ]; then
+            cat "${REPORT_PATH}"
+          else
+            echo "Test report index.html not found."
+            echo "Available files under build/reports:"
+            find "${GITHUB_WORKSPACE}/build/reports" -maxdepth 6 -type f || true
+          fi
+
+      - name: Print detailed failed test reports on failure
+        if: failure()
+        run: |
+          REPORT_ROOT="${GITHUB_WORKSPACE}/build/reports/tests/test"
+          XML_ROOT="${GITHUB_WORKSPACE}/build/test-results/test"
+
+          echo "Looking for failed class reports in: ${REPORT_ROOT}"
+          if [ -f "${REPORT_ROOT}/index.html" ]; then
+            FAILED_CLASS_LINKS="$(grep -oE 'href=\"classes/[^\"]+\\.html#[^\"]+\"' "${REPORT_ROOT}/index.html" | sed -E 's/href=\"([^\"]+)\"/\1/' | sed -E 's/#.*$//' | sort -u || true)"
+            if [ -n "${FAILED_CLASS_LINKS}" ]; then
+              while IFS= read -r relpath; do
+                [ -z "${relpath}" ] && continue
+                fullpath="${REPORT_ROOT}/${relpath}"
+                if [ -f "${fullpath}" ]; then
+                  echo "----- ${fullpath} -----"
+                  cat "${fullpath}"
+                fi
+              done <<EOF
+          ${FAILED_CLASS_LINKS}
+          EOF
+            else
+              echo "No failed class links were found in index.html."
+            fi
+          else
+            echo "Test report index.html not found."
+          fi
+
+          echo "Looking for failed XML test results in: ${XML_ROOT}"
+          if compgen -G "${XML_ROOT}/TEST-*.xml" > /dev/null; then
+            found_failed_xml=0
+            for f in "${XML_ROOT}"/TEST-*.xml; do
+              if grep -qE 'failures=\"[1-9][0-9]*\"|errors=\"[1-9][0-9]*\"' "${f}"; then
+                found_failed_xml=1
+                echo "----- ${f} -----"
+                cat "${f}"
+              fi
+            done
+            if [ "${found_failed_xml}" -eq 0 ]; then
+              echo "No failed XML test files were found."
+            fi
+          else
+            echo "No XML test result files found."
+          fi
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            build/reports/tests/test/**
+            build/test-results/test/**
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Prepare deployment artifact
         run: |
           JAR_PATH="$(ls build/libs/*-all.jar | head -n1)"

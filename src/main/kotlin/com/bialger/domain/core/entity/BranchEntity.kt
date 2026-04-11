@@ -3,6 +3,7 @@ package com.bialger.domain.core.entity
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.time.Instant
+import java.time.LocalTime
 import java.util.UUID
 
 @MappedEntity("branch")
@@ -13,5 +14,7 @@ data class BranchEntity(
     val address: String? = null,
     val phone: String? = null,
     val isActive: Boolean = true,
-    val createdAt: Instant? = null
+    val createdAt: Instant? = null,
+    val startTime: LocalTime = LocalTime.of(8, 0),
+    val endTime: LocalTime = LocalTime.of(20, 0)
 )

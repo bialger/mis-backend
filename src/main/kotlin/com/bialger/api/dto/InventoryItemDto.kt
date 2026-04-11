@@ -1,0 +1,51 @@
+package com.bialger.api.dto
+
+import io.micronaut.core.annotation.Introspected
+import io.micronaut.serde.annotation.Serdeable
+import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
+import java.math.BigDecimal
+import java.util.UUID
+
+@Serdeable
+@Introspected
+@Schema(description = "Inventory item response")
+data class InventoryItemRestDto(
+    val id: String,
+    val name: String,
+    val branchId: String,
+    val quantity: BigDecimal,
+    val unit: String?,
+    val minQuantity: BigDecimal?,
+    val categoryName: String,
+    val roomName: String
+)
+
+@Serdeable
+@Introspected
+@Schema(description = "Create inventory item")
+data class InventoryItemCreateDto(
+    @field:NotNull val categoryId: UUID,
+    @field:NotNull val branchId: UUID,
+    val roomId: UUID?,
+    @field:NotBlank val name: String,
+    val unit: String?,
+    @field:NotNull val quantity: BigDecimal,
+    val minQuantity: BigDecimal?,
+    val costPrice: BigDecimal?
+)
+
+@Serdeable
+@Introspected
+@Schema(description = "Update inventory item")
+data class InventoryItemUpdateDto(
+    @field:NotNull val categoryId: UUID,
+    @field:NotNull val branchId: UUID,
+    val roomId: UUID?,
+    @field:NotBlank val name: String,
+    val unit: String?,
+    @field:NotNull val quantity: BigDecimal,
+    val minQuantity: BigDecimal?,
+    val costPrice: BigDecimal?
+)

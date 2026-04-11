@@ -19,7 +19,9 @@ import io.micronaut.http.sse.Event
 import io.micronaut.views.ModelAndView
 import org.reactivestreams.Publisher
 import java.net.URI
+import io.swagger.v3.oas.annotations.Hidden
 
+@Hidden
 @Controller("/posts")
 class PostWebController(
     private val postService: PostService,

@@ -211,7 +211,7 @@ open class EmployeeMvcService(
     }
 
     private object RolesWithoutSpecialty {
-        val NAMES = setOf("ADMIN", "NURSE")
+        val NAMES = setOf("SYSADMIN", "ADMIN", "NURSE")
     }
 
     companion object {

@@ -7,12 +7,14 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.views.ModelAndView
+import io.swagger.v3.oas.annotations.Hidden
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
+@Hidden
 @Controller
 class PageController(
     private val crmShellPageData: CrmShellPageData

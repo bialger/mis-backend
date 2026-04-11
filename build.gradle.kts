@@ -14,13 +14,17 @@ plugins {
 version = "0.1"
 group = "com.bialger"
 
-val kotlinVersion=project.properties.get("kotlinVersion")
+val kotlinVersion = project.properties.get("kotlinVersion")
+val micronautVersion = project.properties.get("micronautVersion") as String
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    implementation(platform("io.micronaut.platform:micronaut-platform:$micronautVersion"))
     ksp("io.micronaut:micronaut-http-validation")
+    ksp("io.micronaut.openapi:micronaut-openapi")
     ksp("io.micronaut.serde:micronaut-serde-processor")
     ksp("io.micronaut.data:micronaut-data-processor")
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
@@ -31,8 +35,11 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:postgresql")
     implementation("io.micronaut.views:micronaut-views-thymeleaf")
+    implementation("io.micronaut.graphql:micronaut-graphql")
     implementation("io.projectreactor:reactor-core:3.6.14")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
+    implementation("io.micronaut.openapi:micronaut-openapi-annotations")
+    implementation("io.micronaut.validation:micronaut-validation")
     implementation("org.mindrot:jbcrypt:0.4")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
@@ -45,7 +52,7 @@ dependencies {
 
 
 application {
-    mainClass = "com.bialger.ApplicationKt"
+    mainClass = "com.bialger.Application"
 }
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -96,9 +103,9 @@ tasks.named<ProcessResources>("processResources") {
         include("favicon.ico")
         include("design.png")
     }
-    from("frontend") {
+    // Shell pages: must match js/vue/*-app.js (minimal templates). Root frontend/*.html are standalone UIs and break Vue when embedded.
+    from("frontend/pages") {
         into("static/pages")
         include("*.html")
     }
 }
-

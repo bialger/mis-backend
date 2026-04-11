@@ -22,7 +22,9 @@ import io.micronaut.views.ModelAndView
 import org.reactivestreams.Publisher
 import java.net.URI
 import java.util.UUID
+import io.swagger.v3.oas.annotations.Hidden
 
+@Hidden
 @Controller("/mvc/inventory-items")
 class InventoryItemMvcController(
     private val inventoryItemMvcService: InventoryItemMvcService,

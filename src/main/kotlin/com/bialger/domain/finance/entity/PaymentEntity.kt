@@ -21,6 +21,7 @@ data class PaymentEntity(
     val paymentMethod: PaymentMethodType,
     @field:TypeDef(type = DataType.OBJECT, converter = PaymentStatusTypeConverter::class)
     val paymentStatus: PaymentStatusType,
+    val paidAmount: java.math.BigDecimal? = null,
     val notes: String? = null,
     val createdBy: UUID,
     val createdAt: Instant? = null
