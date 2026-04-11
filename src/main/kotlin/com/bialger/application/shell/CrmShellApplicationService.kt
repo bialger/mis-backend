@@ -32,6 +32,7 @@ import com.bialger.domain.finance.repository.PaymentRepository
 import com.bialger.domain.inventory.mvc.InventoryItemMvcService
 import com.bialger.domain.inventory.repository.InventoryCategoryRepository
 import com.bialger.domain.patient.mvc.PatientMvcService
+import com.bialger.domain.patient.repository.PatientConsentRepository
 import com.bialger.domain.patient.repository.PatientTagRepository
 import com.bialger.domain.patient.repository.PatientTagTypeRepository
 import com.bialger.domain.scheduling.entity.AppointmentEntity
@@ -86,6 +87,7 @@ class CrmShellApplicationService(
     private val specialtyRepository: SpecialtyRepository,
     private val patientTagRepository: PatientTagRepository,
     private val patientTagTypeRepository: PatientTagTypeRepository,
+    private val patientConsentRepository: PatientConsentRepository,
     private val paymentRepository: PaymentRepository,
     private val employeeBranchRepository: EmployeeBranchRepository,
     private val employeeRoleRepository: EmployeeRoleRepository,
@@ -144,6 +146,16 @@ class CrmShellApplicationService(
             "patient" to patientDetail,
             "appointments" to appts,
             "medicalRecords" to medicalRecordMvcService.listByPatientId(p.id),
+            "me" to meVm(),
+            "consents" to patientConsentRepository.findByPatientId(p.id).map { c ->
+                mapOf(
+                    "id" to c.id.toString(),
+                    "consentType" to c.consentType.name,
+                    "isGranted" to c.isGranted,
+                    "grantedAt" to c.grantedAt?.toString(),
+                    "revokedAt" to c.revokedAt?.toString()
+                )
+            },
             "patientTagTypes" to patientTagTypeRepository.findAllOrdered().map { t ->
                 mapOf(
                     "id" to t.id.toString(),
