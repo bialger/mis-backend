@@ -8,6 +8,7 @@ import com.bialger.domain.core.repository.RoleRepository
 import com.bialger.security.PasswordHasher
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.event.ApplicationStartupEvent
+import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -18,7 +19,7 @@ import java.util.UUID
  * Login: sysadmin / password: sysadmin (change after first login).
  */
 @Singleton
-class SysadminInitializerService(
+open class SysadminInitializerService(
     private val employeeRepository: EmployeeRepository,
     private val roleRepository: RoleRepository,
     private val employeeRoleRepository: EmployeeRoleRepository,
@@ -28,6 +29,7 @@ class SysadminInitializerService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    @Transactional
     override fun onApplicationEvent(event: ApplicationStartupEvent) {
         val login = "sysadmin"
         if (employeeRepository.existsByEmail(login)) {
