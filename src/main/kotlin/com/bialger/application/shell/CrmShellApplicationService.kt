@@ -687,7 +687,9 @@ class CrmShellApplicationService(
                 roleLabel = roleEnt?.displayName ?: roleEnt?.name ?: "Сотрудник",
                 specialtyIds = emptyList(),
                 branchIds = branchScope,
-                branchScope = branchScope
+                branchScope = branchScope,
+                workStartTime = e.workStartTime?.toString(),
+                workEndTime = e.workEndTime?.toString()
             )
         }
     }

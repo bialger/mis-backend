@@ -204,6 +204,75 @@ class AttachmentApiTest(
         status shouldBe HttpStatus.BAD_REQUEST
     }
 
+    "GET /api/attachments/{id}/download returns file bytes with correct headers" {
+        val patientId = createPatient()
+        val empId = createEmployee()
+        val fileContent = "Hello, PDF!".toByteArray()
+
+        val body = MultipartBody.builder()
+            .addPart("file", "report-2025.pdf", MediaType.of("application/pdf"), fileContent)
+            .addPart("patientId", patientId)
+            .addPart("uploadedBy", empId)
+            .build()
+
+        val uploadResp = client.toBlocking().retrieve(
+            HttpRequest.POST("/api/attachments/upload", body).contentType(MediaType.MULTIPART_FORM_DATA),
+            String::class.java
+        )
+        val attachmentId = objectMapper.readTree(uploadResp).path("id").asText()
+        createdAttachmentIds += UUID.fromString(attachmentId)
+
+        val response = client.toBlocking().exchange(
+            HttpRequest.GET<ByteArray>("/api/attachments/$attachmentId/download"),
+            ByteArray::class.java
+        )
+        response.status shouldBe HttpStatus.OK
+        val disposition = response.headers.get("Content-Disposition") ?: ""
+        disposition shouldContain "attachment"
+        disposition shouldContain "report-2025.pdf"
+        response.headers.get("Content-Type") shouldContain "application/pdf"
+    }
+
+    "GET /api/attachments/{id}/download sets RFC 5987 filename* for non-ASCII filenames" {
+        val patientId = createPatient()
+        val empId = createEmployee()
+
+        val body = MultipartBody.builder()
+            .addPart("file", "отчёт.pdf", MediaType.of("application/pdf"), "content".toByteArray())
+            .addPart("patientId", patientId)
+            .addPart("uploadedBy", empId)
+            .build()
+
+        val uploadResp = client.toBlocking().retrieve(
+            HttpRequest.POST("/api/attachments/upload", body).contentType(MediaType.MULTIPART_FORM_DATA),
+            String::class.java
+        )
+        val attachmentId = objectMapper.readTree(uploadResp).path("id").asText()
+        createdAttachmentIds += UUID.fromString(attachmentId)
+
+        val response = client.toBlocking().exchange(
+            HttpRequest.GET<ByteArray>("/api/attachments/$attachmentId/download"),
+            ByteArray::class.java
+        )
+        response.status shouldBe HttpStatus.OK
+        val disposition = response.headers.get("Content-Disposition") ?: ""
+        // RFC 5987: filename*=UTF-8'' + percent-encoded name
+        disposition shouldContain "filename*=UTF-8''"
+        disposition shouldContain "%D0%BE%D1%82%D1%87%D1%91%D1%82"   // «отчёт» encoded
+    }
+
+    "GET /api/attachments/{id}/download for unknown id returns 404" {
+        val ex = kotlin.runCatching {
+            client.toBlocking().exchange(
+                HttpRequest.GET<ByteArray>("/api/attachments/${UUID.randomUUID()}/download"),
+                ByteArray::class.java
+            )
+        }
+        ex.isFailure shouldBe true
+        val status = (ex.exceptionOrNull() as? HttpClientResponseException)?.status
+        status shouldBe HttpStatus.NOT_FOUND
+    }
+
     "POST /api/attachments/upload with invalid patientId UUID returns 400" {
         val body = MultipartBody.builder()
             .addPart("file", "doc.pdf", MediaType.of("application/pdf"), "content".toByteArray())

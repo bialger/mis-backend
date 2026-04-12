@@ -1,5 +1,6 @@
 package com.bialger.infrastructure
 
+import com.bialger.infrastructure.storage.StorageDownload
 import com.bialger.infrastructure.storage.StorageService
 import com.bialger.infrastructure.storage.YandexStorageService
 import io.micronaut.context.annotation.Replaces
@@ -26,6 +27,12 @@ class StorageServiceStub : StorageService {
     override fun upload(key: String, bytes: ByteArray, contentType: String): String {
         uploads += Upload(key, bytes, contentType)
         return "https://storage.yandexcloud.net/test-bucket/$key"
+    }
+
+    override fun download(key: String): StorageDownload {
+        val upload = uploads.lastOrNull { it.key == key }
+            ?: Upload(key, "stub-content".toByteArray(), "application/octet-stream")
+        return StorageDownload(upload.bytes, upload.contentType)
     }
 
     override fun delete(key: String) {

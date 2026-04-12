@@ -10,6 +10,7 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
+import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import java.net.URI
 
@@ -67,6 +68,23 @@ class YandexStorageService(
     }
 
     /**
+     * Downloads the object identified by [key] from the configured bucket.
+     * Returns its bytes and the content-type as stored in S3 metadata.
+     */
+    override fun download(key: String): StorageDownload {
+        log.info("Downloading from YOS: bucket={} key={}", bucket, key)
+        val request = GetObjectRequest.builder()
+            .bucket(bucket)
+            .key(key)
+            .build()
+        s3.getObject(request).use { response ->
+            val contentType = response.response().contentType() ?: "application/octet-stream"
+            val bytes = response.readAllBytes()
+            return StorageDownload(bytes, contentType)
+        }
+    }
+
+    /**
      * Deletes the object identified by [key] from the configured bucket.
      */
     override fun delete(key: String) {
@@ -80,4 +98,8 @@ class YandexStorageService(
 
     private fun publicUrl(key: String) =
         "https://storage.yandexcloud.net/$bucket/$key"
+
+    /** Extracts the S3 object key from a full public URL produced by [publicUrl]. */
+    fun keyFromUrl(url: String): String =
+        url.removePrefix("https://storage.yandexcloud.net/$bucket/")
 }

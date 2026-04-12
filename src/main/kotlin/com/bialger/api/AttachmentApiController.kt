@@ -5,6 +5,7 @@ import com.bialger.domain.attachment.entity.AttachmentEntity
 import com.bialger.domain.attachment.enums.FileType
 import com.bialger.domain.attachment.repository.AttachmentRepository
 import com.bialger.infrastructure.storage.StorageService
+import com.bialger.infrastructure.storage.YandexStorageService
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
@@ -12,6 +13,7 @@ import io.micronaut.http.annotation.Consumes
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Part
+import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.exceptions.HttpStatusException
@@ -22,6 +24,8 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.UUID
 
@@ -62,6 +66,44 @@ open class AttachmentApiController(
     )
     fun list(@QueryValue patientId: UUID): List<AttachmentRestDto> =
         attachmentRepository.findByPatientId(patientId).map { it.toDto() }
+
+    @Get("/{id}/download")
+    @Operation(summary = "Download attachment file proxied through the backend")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "File bytes with original filename"),
+        ApiResponse(responseCode = "404", description = "Attachment not found")
+    )
+    open fun download(@PathVariable id: UUID): HttpResponse<ByteArray> {
+        val entity = attachmentRepository.findById(id)
+            .orElseThrow { HttpStatusException(HttpStatus.NOT_FOUND, "Attachment not found") }
+
+        val key = extractStorageKey(entity.filePath)
+        val fetched = storageService.download(key)
+
+        val safeFileName = URLEncoder.encode(entity.fileName, StandardCharsets.UTF_8)
+            .replace("+", "%20")
+        val disposition = "attachment; filename=\"${entity.fileName}\"; filename*=UTF-8''$safeFileName"
+
+        return HttpResponse.ok(fetched.bytes)
+            .header("Content-Disposition", disposition)
+            .header("Content-Type", fetched.contentType)
+            .header("Content-Length", fetched.bytes.size.toString())
+            .header("Cache-Control", "private, max-age=3600")
+    }
+
+    /**
+     * Extracts the S3 object key from a full public URL.
+     * Supports both YandexStorageService URLs and the test-stub's "test-bucket" URL.
+     */
+    private fun extractStorageKey(filePath: String): String {
+        if (storageService is YandexStorageService) {
+            return storageService.keyFromUrl(filePath)
+        }
+        // Fallback for test stub: https://storage.yandexcloud.net/test-bucket/<key>
+        val marker = ".net/"
+        val afterNet = filePath.substringAfter(marker)
+        return afterNet.substringAfter("/")   // skip bucket name
+    }
 
     @Post("/upload", produces = [MediaType.APPLICATION_JSON])
     @Consumes(MediaType.MULTIPART_FORM_DATA)

@@ -46,9 +46,13 @@ class ElapsedTimeFilter : HttpServerFilter {
         val contentType = response.contentType.orElse(null) ?: return
         if (!contentType.name.startsWith("text/html")) return
         val htmlString = resolveBodyAsString(response) ?: return
-        if (!htmlString.contains("</body>", ignoreCase = true)) return
+        val closeBody = "</body>"
+        val idx = htmlString.lowercase().lastIndexOf(closeBody)
+        if (idx < 0) return
+        // Only the final closing tag — replacing every "</body>" breaks if the same sequence appears
+        // inside inline scripts or comments (e.g. in a JS comment).
         val script = "<script>window.__serverElapsedMs=$elapsedMs;</script>"
-        val modified = htmlString.replace("</body>", "$script</body>", ignoreCase = true)
+        val modified = htmlString.substring(0, idx) + script + htmlString.substring(idx)
         @Suppress("UNCHECKED_CAST")
         (response as MutableHttpResponse<Any>).body(modified)
     }

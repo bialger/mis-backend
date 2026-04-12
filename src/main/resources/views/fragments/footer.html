@@ -12,24 +12,38 @@
                 <p>Статус системы: <strong>Активна</strong></p>
             </address>
         </div>
-        <div class="l-footer-timing" id="footer-timing" style="font-size:0.8rem;color:#888;padding:0.25rem 1rem;">
-            <!-- populated by timing script below -->
-        </div>
         <div class="l-footer-copyright">
             <p>&copy; <span th:text="${currentYear}">2026</span> Bialger. Все права защищены.</p>
         </div>
     </div>
+    <div class="l-footer-timing-wrap">
+        <p class="l-footer-timing" id="footer-timing" aria-live="polite"></p>
+    </div>
     <script>
         (function () {
-            var serverMs = (typeof window.__serverElapsedMs !== 'undefined') ? window.__serverElapsedMs : null;
-            var navEntry = performance && performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
-            var clientMs = navEntry ? Math.round(navEntry.duration) : Math.round(performance.now());
-            var el = document.getElementById('footer-timing');
-            if (el) {
+            /* After load: server ms is set by injected script at end of document; nav timing needs load. */
+            function updateFooterTiming() {
+                var serverMs = (typeof window.__serverElapsedMs === 'number') ? window.__serverElapsedMs : null;
+                var clientMs = null;
+                var navEntry = performance && performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+                if (navEntry && navEntry.duration > 0) {
+                    clientMs = Math.round(navEntry.duration);
+                } else if (performance.timing && performance.timing.loadEventEnd > 0 && performance.timing.navigationStart > 0) {
+                    clientMs = Math.round(performance.timing.loadEventEnd - performance.timing.navigationStart);
+                } else {
+                    clientMs = Math.round(performance.now());
+                }
+                var el = document.getElementById('footer-timing');
+                if (!el) return;
                 var parts = [];
-                if (serverMs !== null) parts.push('Сервер: ' + serverMs + ' мс');
-                parts.push('Клиент: ' + clientMs + ' мс');
-                el.textContent = 'Время загрузки — ' + parts.join(' | ');
+                if (serverMs !== null) parts.push('ответ сервера ' + serverMs + ' мс');
+                parts.push('полная загрузка в браузере ' + clientMs + ' мс');
+                el.textContent = parts.join(' · ');
+            }
+            if (document.readyState === 'complete') {
+                updateFooterTiming();
+            } else {
+                window.addEventListener('load', updateFooterTiming);
             }
         })();
     </script>

@@ -3,6 +3,7 @@ package com.bialger.domain.core.mvc
 import com.bialger.domain.core.entity.EmployeeEntity
 import com.bialger.domain.mvc.EmployeeMvcForm
 import com.bialger.domain.mvc.formCheckboxOn
+import com.bialger.domain.mvc.parseOptionalEmployeeWorkHours
 import com.bialger.domain.mvc.parseUuidList
 import com.bialger.domain.mvc.parseUuidOrNull
 import com.bialger.web.AppPageModelFactory
@@ -62,6 +63,7 @@ class EmployeeMvcController(
     fun create(@Body form: EmployeeMvcForm): HttpResponse<Any> {
         return try {
             val roleId = form.roleId.parseUuidOrNull() ?: throw IllegalArgumentException("Выберите роль")
+            val (ws, we) = parseOptionalEmployeeWorkHours(form.workStartTime, form.workEndTime)
             val e = employeeMvcService.create(
                 form.fullName,
                 form.email,
@@ -70,7 +72,9 @@ class EmployeeMvcController(
                 form.isActive.formCheckboxOn(),
                 form.specialtyIds.parseUuidList(),
                 form.branchIds.parseUuidList(),
-                roleId
+                roleId,
+                workStartTime = ws,
+                workEndTime = we
             )
             HttpResponse.seeOther(URI.create("/mvc/employees"))
         } catch (e: IllegalArgumentException) {
@@ -121,6 +125,7 @@ class EmployeeMvcController(
     fun update(@PathVariable id: UUID, @Body form: EmployeeMvcForm): HttpResponse<Any> {
         return try {
             val roleId = form.roleId.parseUuidOrNull() ?: throw IllegalArgumentException("Выберите роль")
+            val (ws, we) = parseOptionalEmployeeWorkHours(form.workStartTime, form.workEndTime)
             employeeMvcService.update(
                 id,
                 form.fullName,
@@ -130,7 +135,9 @@ class EmployeeMvcController(
                 form.isActive.formCheckboxOn(),
                 form.specialtyIds.parseUuidList(),
                 form.branchIds.parseUuidList(),
-                roleId
+                roleId,
+                workStartTime = ws,
+                workEndTime = we
             )
             HttpResponse.seeOther(URI.create("/mvc/employees"))
         } catch (e: IllegalArgumentException) {

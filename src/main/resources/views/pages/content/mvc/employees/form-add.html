@@ -28,6 +28,11 @@
                 </label>
             </th:block>
         </fieldset>
+        <p><label>Время приёма (онлайн-запись)<br>
+            <input name="workStartTime" type="time" style="max-width:8rem"> —
+            <input name="workEndTime" type="time" style="max-width:8rem">
+        </label></p>
+        <p class="m-section" style="font-size:0.9rem;opacity:0.85;">Пусто — для записи используются только часы филиала.</p>
         <fieldset class="m-section" th:if="${branches != null}">
             <legend>Филиалы</legend>
             <th:block th:each="b : ${branches}">

@@ -7,6 +7,14 @@
         <p th:if="${item.email != null}"><strong>Email:</strong> <span th:text="${item.email}"></span></p>
         <p th:if="${item.phone != null}"><strong>Тел.:</strong> <span th:text="${item.phone}"></span></p>
         <p><strong>Активен:</strong> <span th:text="${item.isActive} ? 'да' : 'нет'"></span></p>
+        <p th:if="${item.workStartTime != null && item.workEndTime != null}">
+            <strong>Время приёма (онлайн):</strong>
+            <span th:text="${#temporals.format(item.workStartTime, 'HH:mm')}"></span> —
+            <span th:text="${#temporals.format(item.workEndTime, 'HH:mm')}"></span>
+        </p>
+        <p th:if="${item.workStartTime == null || item.workEndTime == null}">
+            <strong>Онлайн-запись:</strong> по часам филиала
+        </p>
         <div th:if="${specialtyNames != null && !specialtyNames.isEmpty()}">
             <p><strong>Специализации:</strong></p>
             <ul>
@@ -31,18 +39,8 @@
             <button type="button" class="m-tab-button" th:attr="data-id=${item.id}" id="mvc-del">Удалить</button>
         </p>
     </div>
-    <script th:inline="javascript">
-        (function () {
-            const b = document.getElementById('mvc-del');
-            if (!b) return;
-            b.addEventListener('click', function () {
-                const id = b.getAttribute('data-id');
-                if (!id || !confirm('Удалить?')) return;
-                fetch('/mvc/employees/' + id, { method: 'DELETE' }).then(function () {
-                    window.location.href = '/mvc/employees';
-                });
-            });
-        })();
+    <script>
+        mvcWireDeleteButton('mvc-del', '/mvc/employees/', '/mvc/employees');
     </script>
 </section>
 </body>

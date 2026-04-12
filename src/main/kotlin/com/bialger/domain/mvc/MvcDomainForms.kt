@@ -103,7 +103,10 @@ data class BranchMvcForm(
     val name: String = "",
     val address: String = "",
     val phone: String = "",
-    val isActive: String = ""
+    val isActive: String = "",
+    /** HTML time input HH:mm */
+    val startTime: String = "",
+    val endTime: String = ""
 )
 
 @Serdeable
@@ -141,7 +144,10 @@ data class EmployeeMvcForm(
     val isActive: String = "",
     val specialtyIds: List<String>? = null,
     val branchIds: List<String>? = null,
-    val roleId: String = ""
+    val roleId: String = "",
+    /** Reception hours for online booking; empty = follow branch. */
+    val workStartTime: String = "",
+    val workEndTime: String = ""
 )
 
 @Serdeable

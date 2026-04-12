@@ -2,6 +2,7 @@ package com.bialger.domain.core.mvc
 
 import com.bialger.domain.mvc.BranchMvcForm
 import com.bialger.domain.mvc.formCheckboxOn
+import com.bialger.domain.mvc.parseBranchHoursOrDefault
 import com.bialger.domain.mvc.parseUuidOrNull
 import com.bialger.web.AppPageModelFactory
 import com.bialger.web.DomainEventSseHub
@@ -62,12 +63,15 @@ class BranchMvcController(
         return try {
             val orgId = form.organizationId.parseUuidOrNull()
                 ?: throw IllegalArgumentException("Выберите организацию")
+            val (st, en) = parseBranchHoursOrDefault(form.startTime, form.endTime)
             val e = branchMvcService.create(
                 orgId,
                 form.name,
                 form.address,
                 form.phone,
-                form.isActive.formCheckboxOn()
+                form.isActive.formCheckboxOn(),
+                startTime = st,
+                endTime = en
             )
             HttpResponse.seeOther(URI.create("/mvc/branches"))
         } catch (e: IllegalArgumentException) {
@@ -121,13 +125,16 @@ class BranchMvcController(
         return try {
             val orgId = form.organizationId.parseUuidOrNull()
                 ?: throw IllegalArgumentException("Выберите организацию")
+            val (st, en) = parseBranchHoursOrDefault(form.startTime, form.endTime)
             branchMvcService.update(
                 id,
                 orgId,
                 form.name,
                 form.address,
                 form.phone,
-                form.isActive.formCheckboxOn()
+                form.isActive.formCheckboxOn(),
+                startTime = st,
+                endTime = en
             )
             HttpResponse.seeOther(URI.create("/mvc/branches"))
         } catch (e: IllegalArgumentException) {

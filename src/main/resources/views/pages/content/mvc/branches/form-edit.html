@@ -14,6 +14,10 @@
         <p><label>Название<br><input name="name" required style="width:100%;max-width:32rem" th:value="${item.name}"></label></p>
         <p><label>Адрес<br><textarea name="address" rows="3" style="width:100%;max-width:32rem" th:text="${item.address}"></textarea></label></p>
         <p><label>Телефон<br><input name="phone" style="width:100%;max-width:32rem" th:value="${item.phone}"></label></p>
+        <p><label>Время работы филиала<br>
+            <input name="startTime" type="time" style="max-width:8rem" th:value="${#temporals.format(item.startTime, 'HH:mm')}"> —
+            <input name="endTime" type="time" style="max-width:8rem" th:value="${#temporals.format(item.endTime, 'HH:mm')}">
+        </label></p>
         <p><label><input type="checkbox" name="isActive" value="on" th:checked="${item.isActive}"> Активен</label></p>
         <p>
             <button type="submit" class="m-tab-button">Сохранить</button>
