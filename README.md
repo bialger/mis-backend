@@ -106,7 +106,19 @@ Backend for Medical Information System powered by Kotlin and Micronaut
 The server must have an **`.env`** file in the same directory as `docker-compose.yml`. Docker Compose loads `.env` from the project directory when you run it.
 
 **Where to put .env on the server:**  
-Create **`/opt/mis/.env`** (next to `docker-compose.yml`). See `deploy/.env.example` for a template. The file must include **`MIS_IMAGE`** and **`APP_PORT`** (e.g. `MIS_IMAGE=ghcr.io/is-web-y27/m3301-bigulov-backend:latest`) so that `docker compose` commands work when run manually; CI sets these when deploying.
+Create **`/opt/mis/.env`** (next to `docker-compose.yml`). See `deploy/.env.example` for a template. The file must include **`MIS_IMAGE`**, **`APP_PORT`**, and **`DOMAIN_NAME`** (example: `MIS_IMAGE=ghcr.io/is-web-y27/m3301-bigulov-backend:latest`, `DOMAIN_NAME=mis.bialger.com`).
+
+HTTPS is terminated by **Caddy** on ports **80/443** and proxied to the app container on port `8000`.  
+For certificate issuance/renewal, make sure:
+- DNS `A/AAAA` record for `DOMAIN_NAME` points to the server.
+- Inbound TCP ports `80` and `443` are open.
+
+If you run Docker Compose manually and want HTTPS enabled, use the `https` profile:
+
+```bash
+cd /opt/mis
+COMPOSE_PROFILES=https docker compose up -d
+```
 
 **Verify Postgres login and password on the server:**
 
@@ -135,7 +147,7 @@ Run Postgres and the app from a locally built image (no pull from GHCR):
    bash deploy/run-local.sh
    ```
 
-   The script: builds JAR → builds image `mis-backend:local` → creates `deploy/.env` with `MIS_IMAGE=mis-backend:local` → runs `docker compose up -d`.
+   The script: builds JAR → builds image `mis-backend:local` → creates `deploy/.env` with `MIS_IMAGE=mis-backend:local` → runs `docker compose up -d` (without the HTTPS profile).
 
    App: http://localhost:8000  
    Postgres: localhost:5432 (user=`mis`, password=`mis`, db=`mis`).
@@ -157,7 +169,7 @@ Defined at the top of the workflow under `env:`; override or set in repository/e
 | `JAVA_VERSION`        | `21`              | JDK version for the primary Java setup.          |
 | `GRADLE_JAVA_VERSION` | `21`              | JDK version used by the Gradle build.            |
 | `HOST`                | `mis.bialger.com` | Deployment server hostname (SSH/SCP).            |
-| `APP_PORT`            | `8000`            | Port the app listens on (and exposed by Docker). |
+| `APP_PORT`            | `8000`            | Local host port for direct app access (`127.0.0.1:APP_PORT -> app:8000`). |
 
 The Docker image name is derived from the repository: `ghcr.io/<owner>/<repo>:latest` (lowercase).
 
