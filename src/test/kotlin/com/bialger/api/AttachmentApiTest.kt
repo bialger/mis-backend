@@ -27,6 +27,7 @@ class AttachmentApiTest(
     private val attachmentRepository: AttachmentRepository,
     private val patientRepository: PatientRepository,
     private val employeeRepository: EmployeeRepository,
+    private val testAuthSupport: TestAuthSupport,
     private val storageStub: StorageServiceStub
 ) : StringSpec({
 
@@ -65,12 +66,7 @@ class AttachmentApiTest(
     /**
      * Uses the auto-auth integration user as upload actor.
      */
-    fun createEmployee(): String {
-        return employeeRepository.findByEmail(TestAuthSupport.TEST_LOGIN)
-            ?.id
-            ?.toString()
-            ?: error("Test auth user is missing: ${TestAuthSupport.TEST_LOGIN}")
-    }
+    fun createEmployee(): String = testAuthSupport.integrationEmployee().id.toString()
 
     afterTest {
         storageStub.reset()

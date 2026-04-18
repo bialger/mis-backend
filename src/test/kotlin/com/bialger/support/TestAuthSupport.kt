@@ -46,9 +46,14 @@ class TestAuthSupport(
     private var cachedSession: TestAuthSession? = null
 
     fun session(): TestAuthSession {
-        cachedSession?.let { return it }
+        cachedSession?.let { cached ->
+            if (integrationEmployeeExists()) return cached
+        }
         synchronized(this) {
-            cachedSession?.let { return it }
+            cachedSession?.let { cached ->
+                if (integrationEmployeeExists()) return cached
+                cachedSession = null
+            }
             val token = transactionManager.executeWrite {
                 val employee = ensureEmployee()
                 val roleCode = ensureRole(employee.id)
@@ -58,6 +63,21 @@ class TestAuthSupport(
             return TestAuthSession(token = token).also { cachedSession = it }
         }
     }
+
+    /**
+     * Ensures the auto-auth integration user exists and returns it (same identity as [session] tokens).
+     */
+    fun integrationEmployee(): EmployeeEntity {
+        session()
+        return transactionManager.executeWrite {
+            employeeRepository.findByEmail(TEST_LOGIN)
+        } ?: error("Test auth user missing: $TEST_LOGIN")
+    }
+
+    private fun integrationEmployeeExists(): Boolean =
+        transactionManager.executeWrite {
+            employeeRepository.findByEmail(TEST_LOGIN) != null
+        }
 
     fun authorize(request: MutableHttpRequest<*>): MutableHttpRequest<*> {
         if (request.headers.contains(TestAuthHeaders.NO_AUTH)) {

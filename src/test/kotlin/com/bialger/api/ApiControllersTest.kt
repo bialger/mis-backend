@@ -1,6 +1,5 @@
 package com.bialger.api
 
-import com.bialger.domain.core.repository.EmployeeRepository
 import com.bialger.support.TestAuthHeaders
 import com.bialger.support.TestAuthSupport
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -26,8 +25,7 @@ class ApiControllersTest(
     @param:Client("/") private val client: HttpClient,
     private val objectMapper: ObjectMapper,
     private val tokenGenerator: TokenGenerator,
-    private val testAuthSupport: TestAuthSupport,
-    private val employeeRepository: EmployeeRepository
+    private val testAuthSupport: TestAuthSupport
 ) : StringSpec({
 
     "authenticated GET /api/shell/bootstrap returns dashboard payload" {
@@ -142,9 +140,7 @@ class ApiControllersTest(
     }
 
     "expired JWT returns 401" {
-        testAuthSupport.session()
-        val employee = employeeRepository.findByEmail(TestAuthSupport.TEST_LOGIN)
-            ?: error("test auth employee missing")
+        val employee = testAuthSupport.integrationEmployee()
         val auth = Authentication.build(
             employee.email ?: TestAuthSupport.TEST_LOGIN,
             listOf("SYSADMIN"),

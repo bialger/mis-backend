@@ -98,6 +98,13 @@ tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative"
     jdkVersion = "21"
 }
 
+// Remote / IDE runners often inherit deploy env (JWT_SECRET, MICRONAUT_ENVIRONMENTS). Tests must use a
+// deterministic JWT secret and the `test` profile so application-test.properties and TestAuthSupport apply.
+tasks.withType<Test>().configureEach {
+    environment("JWT_SECRET", "test-jwt-secret-for-integration-tests-only-1234567890")
+    environment("MICRONAUT_ENVIRONMENTS", "test")
+}
+
 tasks.named<ProcessResources>("processResources") {
     from("frontend") {
         into("static")
