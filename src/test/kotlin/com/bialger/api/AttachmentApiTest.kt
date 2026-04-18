@@ -1,10 +1,13 @@
 package com.bialger.api
 
+import com.bialger.auth.domain.PasswordHasher
 import com.bialger.domain.attachment.repository.AttachmentRepository
+import com.bialger.domain.core.entity.EmployeeEntity
 import com.bialger.domain.core.repository.EmployeeRepository
+import com.bialger.domain.core.repository.EmployeeRoleRepository
+import com.bialger.domain.core.repository.RoleRepository
 import com.bialger.domain.patient.repository.PatientRepository
 import com.bialger.infrastructure.StorageServiceStub
-import com.bialger.support.TestAuthSupport
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
@@ -16,18 +19,26 @@ import io.micronaut.http.MediaType
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.exceptions.HttpClientResponseException
+import io.micronaut.context.annotation.Property
 import io.micronaut.http.client.multipart.MultipartBody
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
+import io.micronaut.transaction.SynchronousTransactionManager
+import java.sql.Connection
+import java.time.Instant
 import java.util.UUID
 
-@MicronautTest
+@MicronautTest(transactional = false)
+@Property(name = "JWT_SECRET", value = "test-jwt-secret-for-integration-tests-only-1234567890")
 class AttachmentApiTest(
     @param:Client("/") private val client: HttpClient,
     private val objectMapper: ObjectMapper,
     private val attachmentRepository: AttachmentRepository,
     private val patientRepository: PatientRepository,
     private val employeeRepository: EmployeeRepository,
-    private val testAuthSupport: TestAuthSupport,
+    private val employeeRoleRepository: EmployeeRoleRepository,
+    private val roleRepository: RoleRepository,
+    private val passwordHasher: PasswordHasher,
+    private val transactionManager: SynchronousTransactionManager<Connection>,
     private val storageStub: StorageServiceStub
 ) : StringSpec({
 
@@ -64,9 +75,33 @@ class AttachmentApiTest(
     }
 
     /**
-     * Uses the auto-auth integration user as upload actor.
+     * Creates a dedicated employee per call so parallel specs cannot invalidate `uploadedBy` via shared
+     * integration-auth cleanup (FK failures surfaced as conflict responses).
      */
-    fun createEmployee(): String = testAuthSupport.integrationEmployee().id.toString()
+    fun createEmployee(): String = transactionManager.executeWrite {
+        val id = UUID.randomUUID()
+        val email = "attach-${id.toString().take(8)}@mis.local"
+        employeeRepository.save(
+            EmployeeEntity(
+                id = id,
+                fullName = "Attachment test actor",
+                email = email,
+                phone = null,
+                passwordHash = passwordHasher.hash("AttachActorPass123!"),
+                mustChangePassword = false,
+                isActive = true,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
+            )
+        )
+        val role = roleRepository.findByName("ADMIN")
+            ?: roleRepository.findByName("SYSADMIN")
+            ?: roleRepository.findAllOrdered().firstOrNull()
+            ?: error("No role for attachment test employee")
+        employeeRoleRepository.save(id, role.id)
+        createdEmployeeIds += id
+        id.toString()
+    }
 
     afterTest {
         storageStub.reset()
@@ -74,7 +109,12 @@ class AttachmentApiTest(
         createdAttachmentIds.clear()
         createdPatientIds.forEach { runCatching { patientRepository.deleteById(it) } }
         createdPatientIds.clear()
-        createdEmployeeIds.forEach { runCatching { employeeRepository.deleteById(it) } }
+        transactionManager.executeWrite {
+            createdEmployeeIds.forEach { eid ->
+                runCatching { employeeRoleRepository.deleteByEmployeeId(eid) }
+                runCatching { employeeRepository.deleteById(eid) }
+            }
+        }
         createdEmployeeIds.clear()
     }
 

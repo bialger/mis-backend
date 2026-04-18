@@ -21,12 +21,18 @@ import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 
 @MicronautTest
 @Property(name = "micronaut.http.client.follow-redirects", value = "false")
+@Property(name = "JWT_SECRET", value = "test-jwt-secret-for-integration-tests-only-1234567890")
 class ApiControllersTest(
     @param:Client("/") private val client: HttpClient,
     private val objectMapper: ObjectMapper,
     private val tokenGenerator: TokenGenerator,
     private val testAuthSupport: TestAuthSupport
 ) : StringSpec({
+
+    beforeSpec {
+        // Prime JWT + DB user before any HTTP call (avoids races with parallel specs / first-request quirks).
+        testAuthSupport.session()
+    }
 
     "authenticated GET /api/shell/bootstrap returns dashboard payload" {
         val body = client.toBlocking().retrieve("/api/shell/bootstrap?kind=dashboard")
