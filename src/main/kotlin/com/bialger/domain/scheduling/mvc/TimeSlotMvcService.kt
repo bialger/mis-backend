@@ -1,5 +1,7 @@
 package com.bialger.domain.scheduling.mvc
 
+import com.bialger.domain.core.entity.BranchEntity
+import com.bialger.domain.core.entity.EmployeeEntity
 import com.bialger.domain.core.repository.BranchRepository
 import com.bialger.domain.core.repository.EmployeeRepository
 import com.bialger.domain.core.repository.RoomRepository
@@ -51,6 +53,52 @@ class TimeSlotMvcService(
             )
         }
     }
+
+    /**
+     * Slots for one branch / doctor / day, limited to the intersection of branch and doctor reception hours.
+     */
+    fun listRowsForOnlineBooking(branchId: UUID, employeeId: UUID, slotDate: LocalDate): List<TimeSlotListRow> {
+        val branch = branchRepository.findById(branchId).orElse(null) ?: return emptyList()
+        val employee = employeeRepository.findById(employeeId).orElse(null) ?: return emptyList()
+        if (!employee.isActive) return emptyList()
+        val window = effectiveOnlineBookingWindow(branch, employee) ?: return emptyList()
+        val (wStart, wEnd) = window
+        // Use findByBranchIdAndSlotDate (known-good) then filter by employee — avoids brittle multi-param queries.
+        val slots = timeSlotRepository.findByBranchIdAndSlotDate(branchId, slotDate)
+            .filter { it.employeeId == employeeId }
+            .filter { overlapsWindow(it, wStart, wEnd) }
+            .sortedBy { it.startTime }
+        if (slots.isEmpty()) return emptyList()
+        val roomIds = slots.map { it.roomId }.distinct()
+        val roomNames =
+            if (roomIds.isEmpty()) emptyMap()
+            else roomRepository.findByIds(roomIds).associate { it.id to it.name }
+        val branchName = branch.name
+        val empName = employee.fullName
+        return slots.map { s ->
+            TimeSlotListRow(
+                s,
+                empName,
+                roomNames[s.roomId] ?: s.roomId.toString(),
+                branchName
+            )
+        }
+    }
+
+    private fun effectiveOnlineBookingWindow(branch: BranchEntity, employee: EmployeeEntity): Pair<LocalTime, LocalTime>? {
+        val bs = branch.startTime
+        val be = branch.endTime
+        if (be <= bs) return null
+        val es = employee.workStartTime ?: bs
+        val ee = employee.workEndTime ?: be
+        val start = maxOf(bs, es)
+        val end = minOf(be, ee)
+        return if (end > start) start to end else null
+    }
+
+    /** Slot overlaps [wStart, wEnd) style window (half-open end avoids dropping 20:00–20:00 edge cases). */
+    private fun overlapsWindow(s: TimeSlotEntity, wStart: LocalTime, wEnd: LocalTime): Boolean =
+        s.startTime < wEnd && s.endTime > wStart
 
     fun getById(id: UUID): TimeSlotEntity? = timeSlotRepository.findById(id).orElse(null)
 

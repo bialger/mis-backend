@@ -4,6 +4,8 @@ import com.bialger.domain.core.entity.BranchEntity
 import com.bialger.domain.core.repository.BranchRepository
 import com.bialger.domain.core.repository.OrganizationRepository
 import com.bialger.web.DomainMvcEventEmitter
+import io.micronaut.cache.annotation.CacheInvalidate
+import io.micronaut.cache.annotation.Cacheable
 import jakarta.inject.Singleton
 import java.time.Instant
 import java.time.LocalTime
@@ -15,13 +17,14 @@ data class BranchListRow(
 )
 
 @Singleton
-class BranchMvcService(
+open class BranchMvcService(
     private val branchRepository: BranchRepository,
     private val organizationRepository: OrganizationRepository,
     private val domainMvcEventEmitter: DomainMvcEventEmitter
 ) {
 
-    fun listRows(): List<BranchListRow> {
+    @Cacheable("branches")
+    open fun listRows(): List<BranchListRow> {
         val branches = branchRepository.findAllOrdered()
         if (branches.isEmpty()) return emptyList()
         val orgIds = branches.map { it.organizationId }.distinct()
@@ -35,7 +38,8 @@ class BranchMvcService(
 
     fun getById(id: UUID): BranchEntity? = branchRepository.findById(id).orElse(null)
 
-    fun create(
+    @CacheInvalidate("branches")
+    open fun create(
         organizationId: UUID,
         name: String,
         address: String?,
@@ -64,7 +68,8 @@ class BranchMvcService(
         return entity
     }
 
-    fun update(
+    @CacheInvalidate("branches")
+    open fun update(
         id: UUID,
         organizationId: UUID,
         name: String,
@@ -92,7 +97,8 @@ class BranchMvcService(
         return updated
     }
 
-    fun delete(id: UUID) {
+    @CacheInvalidate("branches")
+    open fun delete(id: UUID) {
         val existing = branchRepository.findById(id).orElseThrow { IllegalArgumentException("Not found") }
         branchRepository.deleteById(id)
         domainMvcEventEmitter.notify(TOPIC, "DELETED", id.toString(), existing.name)

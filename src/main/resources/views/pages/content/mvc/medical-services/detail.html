@@ -11,18 +11,8 @@
             <button type="button" class="m-tab-button" th:attr="data-id=${item.id}" id="mvc-del">Удалить</button>
         </p>
     </div>
-    <script th:inline="javascript">
-        (function () {
-            const b = document.getElementById('mvc-del');
-            if (!b) return;
-            b.addEventListener('click', function () {
-                const id = b.getAttribute('data-id');
-                if (!id || !confirm('Удалить?')) return;
-                fetch('/mvc/medical-services/' + id, { method: 'DELETE' }).then(function () {
-                    window.location.href = '/mvc/medical-services';
-                });
-            });
-        })();
+    <script>
+        mvcWireDeleteButton('mvc-del', '/mvc/medical-services/', '/mvc/medical-services');
     </script>
 </section>
 </body>

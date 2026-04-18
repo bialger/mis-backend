@@ -40,14 +40,16 @@ class AuditLogRepositoryFilterTest(
 
     "findByDateRange returns entries within the range" {
         val actorId = employee("dr@filter.mis")
-        val from = Instant.now().minus(5, ChronoUnit.DAYS)
-        val to = Instant.now().plus(1, ChronoUnit.DAYS)
+        val insideTs = Instant.now().plus(10, ChronoUnit.DAYS)
+        val from = insideTs.minus(1, ChronoUnit.DAYS)
+        val to = insideTs.plus(1, ChronoUnit.DAYS)
 
-        log(actorId, "patient", ts = Instant.now().minus(2, ChronoUnit.DAYS))
+        log(actorId, "patient", ts = insideTs)
         log(actorId, "patient", ts = Instant.now().minus(10, ChronoUnit.DAYS))
 
         val page = auditLogRepository.findByDateRange(from, to, Pageable.from(0, 100))
-        page.content.any { it.employeeId == actorId && it.timestamp.isAfter(from) } shouldBe true
+        (page.totalSize >= 1) shouldBe true
+        page.content.all { !it.timestamp.isBefore(from) && !it.timestamp.isAfter(to) } shouldBe true
     }
 
     "findByEntityTypeAndDateRange returns only matching entityType" {

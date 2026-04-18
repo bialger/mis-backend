@@ -49,13 +49,14 @@ class SystemSettingMvcServicePermissionsTest(
         (perms["canEditBackdateDays"] as Int) shouldBe 3650
     }
 
-    "ADMIN gets finance and inventory access, no EGISZ" {
+    "ADMIN gets finance and inventory access with operational EGISZ/backdate limits" {
         val perms = service.resolvePermissions("ADMIN")
         perms["canViewFinance"] shouldBe true
         perms["canEditFinance"] shouldBe true
         perms["canViewInventory"] shouldBe true
         perms["canWriteInventory"] shouldBe true
-        perms["canManualEgiszSend"] shouldBe false
+        perms["canManualEgiszSend"] shouldBe true
+        perms["canEditBackdateDays"] shouldBe 30
     }
 
     "default (no roleCode) behaves like ADMIN" {

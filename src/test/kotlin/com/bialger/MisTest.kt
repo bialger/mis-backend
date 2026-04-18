@@ -1,14 +1,20 @@
 package com.bialger
 
+import com.bialger.support.TestAuthHeaders
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 import io.micronaut.runtime.EmbeddedApplication
+import io.micronaut.context.annotation.Property
+import io.micronaut.http.HttpRequest
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
 import io.kotest.core.spec.style.StringSpec
 
 @MicronautTest(transactional = false)
+@Property(name = "micronaut.http.client.follow-redirects", value = "false")
 class MisTest(
     private val application: EmbeddedApplication<*>,
     @param:Client("/") private val client: HttpClient
@@ -18,10 +24,14 @@ class MisTest(
         assert(application.isRunning)
     }
 
-    "test root endpoint renders dashboard page" {
-        val html = client.toBlocking().retrieve("/")
-        html shouldContain "Панель управления"
-        html shouldContain "Медицинская CRM система"
+    "test root endpoint redirects to /login when unauthorized" {
+        val response = client.toBlocking().exchange(
+            HttpRequest.GET<Any>("/")
+                .header(TestAuthHeaders.NO_AUTH, "1"),
+            String::class.java
+        )
+        response.status shouldBe HttpStatus.SEE_OTHER
+        response.header("Location") shouldContain "/login"
     }
 
     "test frontend static css is served by micronaut" {

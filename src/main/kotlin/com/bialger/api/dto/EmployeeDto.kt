@@ -5,6 +5,7 @@ import io.micronaut.serde.annotation.Serdeable
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import java.time.LocalTime
 import java.util.UUID
 
 @Serdeable
@@ -24,11 +25,14 @@ data class EmployeeRestDto(
     val roleId: String,
     /** Role code name, e.g. "HEAD", "DOCTOR". */
     val roleCode: String,
-    /** Role display label, e.g. "Главврач". */
+    /** Role display label, e.g. "Chief physician". */
     val roleLabel: String,
     val specialtyIds: List<String>,
     val branchIds: List<String>,
-    val branchScope: List<String>
+    val branchScope: List<String>,
+    /** ISO local time or null when not set (online booking uses branch hours). */
+    val workStartTime: String?,
+    val workEndTime: String?
 )
 
 @Serdeable
@@ -42,7 +46,9 @@ data class EmployeeCreateDto(
     val isActive: Boolean = true,
     val specialtyIds: List<UUID> = emptyList(),
     val branchIds: List<UUID> = emptyList(),
-    @field:NotNull val roleId: UUID
+    @field:NotNull val roleId: UUID,
+    val workStartTime: LocalTime? = null,
+    val workEndTime: LocalTime? = null
 )
 
 @Serdeable
@@ -56,5 +62,7 @@ data class EmployeeUpdateDto(
     val isActive: Boolean = true,
     val specialtyIds: List<UUID> = emptyList(),
     val branchIds: List<UUID> = emptyList(),
-    @field:NotNull val roleId: UUID
+    @field:NotNull val roleId: UUID,
+    val workStartTime: LocalTime? = null,
+    val workEndTime: LocalTime? = null
 )

@@ -12,7 +12,7 @@ import reactor.core.publisher.Flux
 /**
  * Proxies (nginx) often buffer SSE; disable buffering. Safe for all long-lived event-stream responses.
  */
-@Filter(value = ["/mvc/**/events", "/posts/events"])
+@Filter(value = ["/posts/events"])
 class SseEventsResponseHeadersFilter : HttpServerFilter {
 
     override fun doFilter(request: HttpRequest<*>, chain: ServerFilterChain): Publisher<MutableHttpResponse<*>> =

@@ -20,6 +20,7 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Patch
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -28,6 +29,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
 
@@ -75,6 +77,17 @@ open class TimeSlotsApiController(
         val resp = HttpResponse.ok(page)
         PaginationLinks.appendToResponse(request, page, resp)
         return resp
+    }
+
+    @Get("/for-online-booking", produces = [MediaType.APPLICATION_JSON])
+    @Operation(summary = "Time slots for patient booking (branch ∩ doctor hours, one day)")
+    fun listForOnlineBooking(
+        @QueryValue branchId: UUID,
+        @QueryValue employeeId: UUID,
+        @QueryValue slotDate: String
+    ): List<TimeSlotRestDto> {
+        val date = LocalDate.parse(slotDate.trim())
+        return timeSlotMvcService.listRowsForOnlineBooking(branchId, employeeId, date).map { rowToDto(it) }
     }
 
     @Get("/{id}", produces = [MediaType.APPLICATION_JSON])

@@ -69,6 +69,7 @@ open class BranchesApiController(
         val rows = branchMvcService.listRows().map { rowToDto(it) }
         val page = ApiPage.slice(rows, pageable)
         val resp = HttpResponse.ok(page)
+        resp.header("Cache-Control", "public, max-age=3600")
         PaginationLinks.appendToResponse(request, page, resp)
         return resp
     }
@@ -80,10 +81,11 @@ open class BranchesApiController(
             content = [Content(mediaType = "application/json", schema = Schema(implementation = BranchRestDto::class))]),
         ApiResponse(responseCode = "404", description = "Not found")
     )
-    fun getOne(@PathVariable id: UUID): BranchRestDto {
+    fun getOne(@PathVariable id: UUID): HttpResponse<BranchRestDto> {
         val row = branchMvcService.listRows().find { it.branch.id == id }
             ?: throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
-        return rowToDto(row)
+        return HttpResponse.ok(rowToDto(row))
+            .header("Cache-Control", "public, max-age=3600")
     }
 
     @Post(processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])

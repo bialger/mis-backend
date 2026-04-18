@@ -17,7 +17,7 @@
                                 class="m-input is-focusable"
                                 required
                                 autocomplete="username"
-                                placeholder="Введите логин или имя пользователя">
+                                placeholder="Введите e-mail сотрудника">
                     </div>
                     <div class="m-form-group">
                         <label for="password" class="m-form-label">Пароль <span class="m-form-required">*</span></label>
@@ -30,14 +30,35 @@
                                 autocomplete="current-password"
                                 placeholder="Введите пароль">
                     </div>
+                    <div v-if="passwordChangeRequired" class="m-form-group">
+                        <label for="new-password" class="m-form-label">Новый пароль <span class="m-form-required">*</span></label>
+                        <input
+                                type="password"
+                                id="new-password"
+                                v-model="formData.newPassword"
+                                class="m-input is-focusable"
+                                minlength="8"
+                                autocomplete="new-password"
+                                placeholder="Минимум 8 символов">
+                    </div>
+                    <div v-if="passwordChangeRequired" class="m-form-group">
+                        <label for="confirm-password" class="m-form-label">Подтверждение пароля <span class="m-form-required">*</span></label>
+                        <input
+                                type="password"
+                                id="confirm-password"
+                                v-model="formData.confirmPassword"
+                                class="m-input is-focusable"
+                                minlength="8"
+                                autocomplete="new-password"
+                                placeholder="Повторите новый пароль">
+                    </div>
                     <button type="submit" class="m-button is-hoverable-button is-active-button" :disabled="loading">
-                        {{ loading ? 'Вход...' : 'Войти' }}
+                        {{ loading ? (passwordChangeRequired ? 'Смена пароля...' : 'Вход...') : (passwordChangeRequired ? 'Сменить пароль и войти' : 'Войти') }}
                     </button>
                 </form>
             </div>
             <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--muted-color); text-align: center;">
-                <p>Для тестирования используйте:</p>
-                <p><strong>Логин:</strong> sidorov_head, petrova_admin, ivanov_doctor, sysadmin</p>
+                <p>Авторизация выполняется по e-mail сотрудника.</p>
                 <p style="margin-top: 0.75rem;">
                     <a th:href="@{/patient-booking}" class="m-link">Онлайн-запись для пациентов</a>
                 </p>

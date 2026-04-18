@@ -35,7 +35,11 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:postgresql")
     implementation("io.micronaut.views:micronaut-views-thymeleaf")
+    implementation("io.micronaut.cache:micronaut-cache-caffeine")
+    implementation(platform("software.amazon.awssdk:bom:2.26.12"))
+    implementation("software.amazon.awssdk:s3")
     implementation("io.micronaut.graphql:micronaut-graphql")
+    implementation("io.micronaut.security:micronaut-security-jwt")
     implementation("io.projectreactor:reactor-core:3.6.14")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
     implementation("io.micronaut.openapi:micronaut-openapi-annotations")
@@ -92,6 +96,17 @@ micronaut {
 
 tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative") {
     jdkVersion = "21"
+}
+
+// Remote / IDE runners often inherit deploy env (JWT_SECRET, MICRONAUT_ENVIRONMENTS). Tests must use a
+// deterministic JWT secret and the `test` profile so application-test.properties and TestAuthSupport apply.
+tasks.withType<Test>().configureEach {
+    val testJwt = "test-jwt-secret-for-integration-tests-only-1234567890"
+    environment("JWT_SECRET", testJwt)
+    environment("MICRONAUT_ENVIRONMENTS", "test")
+    // Belt-and-suspenders: some runners merge parent env in an order that can shadow Test.environment;
+    // Micronaut also reads Java system properties for placeholders in application.properties.
+    systemProperty("JWT_SECRET", testJwt)
 }
 
 tasks.named<ProcessResources>("processResources") {

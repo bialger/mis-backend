@@ -3,6 +3,7 @@ package com.bialger.domain.core.entity
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.time.Instant
+import java.time.LocalTime
 import java.util.UUID
 
 @MappedEntity("employee")
@@ -12,10 +13,16 @@ data class EmployeeEntity(
     val email: String? = null,
     val phone: String? = null,
     val passwordHash: String,
+    val mustChangePassword: Boolean = false,
+    /** Optional per-account override for backdate editing window (days). Null = inherit global default. */
+    val backdateDaysOverride: Int? = null,
     val isActive: Boolean = true,
     val digitalSignature: ByteArray? = null,
     val createdAt: Instant? = null,
-    val updatedAt: Instant? = null
+    val updatedAt: Instant? = null,
+    /** Optional; when null, online booking uses branch hours only. */
+    val workStartTime: LocalTime? = null,
+    val workEndTime: LocalTime? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

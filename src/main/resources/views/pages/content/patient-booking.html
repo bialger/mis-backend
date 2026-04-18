@@ -14,35 +14,54 @@
                 <h3 style="margin-top:0;">Выбор врача и времени</h3>
                 <div class="m-form-group">
                     <label class="m-form-label">Филиал</label>
-                    <select v-model="selectedBranchId" class="m-select is-focusable">
+                    <select v-model="selectedBranchId" class="m-select is-focusable" @change="loadDoctorsForBranch">
                         <option v-for="branch in branches" :key="branch.id" :value="branch.id">{{ branch.name }}</option>
                     </select>
                 </div>
                 <div class="m-form-group">
                     <label class="m-form-label">Врач</label>
-                    <select v-model="selectedDoctorId" class="m-select is-focusable">
+                    <select v-model="selectedDoctorId" class="m-select is-focusable" @change="loadSlots" :disabled="!doctors.length">
                         <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">{{ doctor.name }}</option>
                     </select>
+                    <span v-if="selectedBranchId && !doctors.length" class="m-info-badge" style="display:block;margin-top:0.35rem;font-size:0.85rem;">В этом филиале нет врачей для онлайн-записи (роли «Врач» / «Главврач»).</span>
                 </div>
+                <p v-if="scheduleHint" class="m-info-badge" style="font-size:0.9rem;">{{ scheduleHint }}</p>
                 <div class="m-form-group">
                     <label class="m-form-label">Дата</label>
-                    <input type="date" v-model="selectedDate" class="m-input is-focusable">
+                    <input type="date" v-model="selectedDate" class="m-input is-focusable" @change="loadSlots">
                 </div>
                 <div class="m-form-group">
                     <button class="m-button is-hoverable-button" @click="loadSlots" :disabled="loadingSlots">Обновить слоты</button>
                 </div>
-                <div v-if="loadingSlots" class="m-preloader">Загрузка свободных слотов...</div>
+                <div v-if="loadingSlots" class="m-preloader">Загрузка расписания…</div>
                 <div v-else>
-                    <p v-if="slots.length === 0" class="m-info-badge">Свободных слотов не найдено на выбранный день.</p>
-                    <div class="m-slot-list">
-                        <div v-for="slot in slots" :key="slot.id"
-                             class="m-slot-card"
-                             :class="{ 'is-busy': !slot.free, 'is-selected': selectedSlot && selectedSlot.id === slot.id }"
-                             @click="selectSlot(slot)">
-                            <div class="m-calendar-slot-time">{{ formatSlot(slot.start) }} – {{ formatSlot(slot.end) }}</div>
-                            <div style="font-size: 0.85rem; color: var(--muted-color);">{{ slot.free ? 'Свободно' : 'Занято' }}</div>
+                    <p v-if="sortedSlots.length === 0" class="m-info-badge">На выбранный день нет интервалов приёма.</p>
+                    <template v-else>
+                        <p class="m-patient-day-legend">
+                            <span class="m-patient-day-legend__item m-patient-day-legend__item--free">свободно</span>
+                            <span class="m-patient-day-legend__item m-patient-day-legend__item--busy">занято</span>
+                        </p>
+                        <p v-if="freeSlotsCount === 0" class="m-info-badge" style="margin-bottom:0.75rem;">Свободных окон на эту дату нет. Ниже показаны интервалы (занятые или недоступные для записи) — выберите другой день.</p>
+                        <div class="m-patient-day-schedule" role="list">
+                            <div v-for="slot in sortedSlots" :key="slot.id" role="listitem"
+                                 class="m-patient-slot"
+                                 :class="{
+                                   'm-patient-slot--free': slot.free,
+                                   'm-patient-slot--busy': !slot.free,
+                                   'm-patient-slot--selected': selectedSlot && selectedSlot.id === slot.id
+                                 }"
+                                 @click="selectSlot(slot)">
+                                <div class="m-patient-slot-main">
+                                    <span class="m-patient-slot-time">{{ formatSlot(slot.start) }} – {{ formatSlot(slot.end) }}</span>
+                                    <span v-if="slot.roomName" class="m-patient-slot-room">{{ slot.roomName }}</span>
+                                </div>
+                                <span class="m-patient-slot-status" :class="slot.free ? 'm-patient-slot-status--free' : 'm-patient-slot-status--busy'">
+                                    <span v-if="!slot.free" class="m-patient-slot-dot" aria-hidden="true">●</span>
+                                    {{ slot.free ? 'Свободно' : 'Занято' }}
+                                </span>
+                            </div>
                         </div>
-                    </div>
+                    </template>
                 </div>
             </div>
 

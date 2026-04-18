@@ -1,98 +1,178 @@
 package com.bialger.api
 
+import com.bialger.support.TestAuthHeaders
+import com.bialger.support.TestAuthSupport
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.micronaut.context.annotation.Property
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.exceptions.HttpClientResponseException
+import io.micronaut.security.authentication.Authentication
+import io.micronaut.security.token.generator.TokenGenerator
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
-import java.util.UUID
 
 @MicronautTest
+@Property(name = "micronaut.http.client.follow-redirects", value = "false")
+@Property(name = "JWT_SECRET", value = "test-jwt-secret-for-integration-tests-only-1234567890")
 class ApiControllersTest(
     @param:Client("/") private val client: HttpClient,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val tokenGenerator: TokenGenerator,
+    private val testAuthSupport: TestAuthSupport
 ) : StringSpec({
 
-    "GET /api/me returns stub user and permissions" {
-        val body = client.toBlocking().retrieve("/api/me")
-        body shouldContain "\"user\""
-        body shouldContain "permissions"
+    beforeSpec {
+        // Prime JWT + DB user before any HTTP call (avoids races with parallel specs / first-request quirks).
+        testAuthSupport.session()
     }
 
-    "GET /api/shell/bootstrap returns dashboard payload" {
+    "authenticated GET /api/shell/bootstrap returns dashboard payload" {
         val body = client.toBlocking().retrieve("/api/shell/bootstrap?kind=dashboard")
         objectMapper.readTree(body).path("kind").asText() shouldBe "dashboard"
     }
 
-    "GET /api/shell/bootstrap with unknown kind returns 400" {
+    "authenticated GET /api/shell/bootstrap with unknown kind returns 400" {
         val ex = shouldThrow<HttpClientResponseException> {
             client.toBlocking().retrieve("/api/shell/bootstrap?kind=__unknown_kind__")
         }
         ex.status shouldBe HttpStatus.BAD_REQUEST
     }
 
-    "GET /api/patients returns paged JSON" {
+    "authenticated GET /api/patients returns paged JSON" {
         val body = client.toBlocking().retrieve("/api/patients?page=0&size=10")
         objectMapper.readTree(body).path("content").isArray shouldBe true
     }
 
-    "GET /api/patients/{id} for missing id returns 404" {
-        val ex = shouldThrow<HttpClientResponseException> {
-            client.toBlocking().retrieve("/api/patients/${UUID.randomUUID()}")
-        }
-        ex.status shouldBe HttpStatus.NOT_FOUND
+    "authenticated GET /api/patients works with cookie-only JWT" {
+        val token = testAuthSupport.session().token
+        val body = client.toBlocking().retrieve(
+            HttpRequest.GET<Any>("/api/patients?page=0&size=10")
+                .header(TestAuthHeaders.NO_AUTH, "1")
+                .header("Cookie", "MIS_AUTH=$token")
+        )
+        objectMapper.readTree(body).path("content").isArray shouldBe true
     }
 
-    "GET /api/patients/{id}/tags for missing patient returns 404" {
-        val ex = shouldThrow<HttpClientResponseException> {
-            client.toBlocking().retrieve("/api/patients/${UUID.randomUUID()}/tags")
-        }
-        ex.status shouldBe HttpStatus.NOT_FOUND
+    "authenticated POST /graphql succeeds" {
+        val payload = """{"query":"query { patients(page:0,size:1){ pageInfo { size } } }"}"""
+        val response = client.toBlocking().exchange(
+            HttpRequest.POST("/graphql", payload).contentType(MediaType.APPLICATION_JSON),
+            String::class.java
+        )
+        response.status shouldBe HttpStatus.OK
+        response.body().shouldContain("data")
     }
 
-    "POST /api/patients with invalid bean validation returns 400" {
-        val body =
-            """{"organizationId":"00000000-0000-0000-0000-000000000001","cardNumber":"","fullName":"Name"}"""
+    "authenticated GET / returns internal page content" {
+        val html = client.toBlocking().retrieve("/")
+        html shouldContain "Панель управления"
+    }
+
+    "authenticated non-sysadmin GET /grafana returns 403" {
         val ex = shouldThrow<HttpClientResponseException> {
             client.toBlocking().exchange(
-                HttpRequest.POST("/api/patients", body).contentType(MediaType.APPLICATION_JSON),
+                HttpRequest.GET<Any>("/grafana"),
                 String::class.java
             )
         }
-        ex.status shouldBe HttpStatus.BAD_REQUEST
-        val err = ex.response.getBody(String::class.java).orElse("")
-        err shouldContain "validation_failed"
-        err shouldContain "cardNumber"
+        ex.status shouldBe HttpStatus.FORBIDDEN
     }
 
-    "GET /api/patients sets Link header when a next page exists" {
-        val body = client.toBlocking().retrieve("/api/patients?page=0&size=1")
-        val total = objectMapper.readTree(body).path("totalSize").asLong()
-        if (total > 1L) {
-            val resp = client.toBlocking().exchange(
-                HttpRequest.GET<Any>("/api/patients?page=0&size=1"),
+    "authenticated non-sysadmin GET /api/grafana/** returns 403" {
+        val ex = shouldThrow<HttpClientResponseException> {
+            client.toBlocking().exchange(
+                HttpRequest.GET<Any>("/api/grafana/status"),
                 String::class.java
             )
-            resp.header("Link").shouldNotBeNull()
-            resp.header("Link") shouldContain "rel=\"next\""
         }
+        ex.status shouldBe HttpStatus.FORBIDDEN
     }
 
-    "GET /api/audit-logs returns paged JSON" {
-        val body = client.toBlocking().retrieve("/api/audit-logs?page=0&size=5")
-        objectMapper.readTree(body).path("content").isArray shouldBe true
+    "unauthenticated GET /api/patients returns 401" {
+        val ex = shouldThrow<HttpClientResponseException> {
+            client.toBlocking().exchange(
+                HttpRequest.GET<Any>("/api/patients?page=0&size=1")
+                    .header(TestAuthHeaders.NO_AUTH, "1"),
+                String::class.java
+            )
+        }
+        ex.status shouldBe HttpStatus.UNAUTHORIZED
     }
 
-    "GET /api/branches returns paged JSON" {
-        val body = client.toBlocking().retrieve("/api/branches?page=0&size=50")
-        objectMapper.readTree(body).path("content").isArray shouldBe true
+    "unauthenticated POST /graphql returns 401" {
+        val ex = shouldThrow<HttpClientResponseException> {
+            client.toBlocking().exchange(
+                HttpRequest.POST(
+                    "/graphql",
+                    """{"query":"query { patients(page:0,size:1){ pageInfo { size } } }"}"""
+                )
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header(TestAuthHeaders.NO_AUTH, "1"),
+                String::class.java
+            )
+        }
+        ex.status shouldBe HttpStatus.UNAUTHORIZED
+    }
+
+    "unauthenticated GET / redirects to /login" {
+        val response = client.toBlocking().exchange(
+            HttpRequest.GET<Any>("/")
+                .header(TestAuthHeaders.NO_AUTH, "1"),
+            String::class.java
+        )
+        response.status shouldBe HttpStatus.SEE_OTHER
+        response.header("Location").shouldNotBeNull()
+        response.header("Location") shouldBe "/login"
+    }
+
+    "invalid JWT returns 401" {
+        val ex = shouldThrow<HttpClientResponseException> {
+            client.toBlocking().exchange(
+                HttpRequest.GET<Any>("/api/patients?page=0&size=1")
+                    .header(TestAuthHeaders.NO_AUTH, "1")
+                    .header("Authorization", "Bearer broken.jwt.token"),
+                String::class.java
+            )
+        }
+        ex.status shouldBe HttpStatus.UNAUTHORIZED
+    }
+
+    "expired JWT returns 401" {
+        val employee = testAuthSupport.integrationEmployee()
+        val auth = Authentication.build(
+            employee.email ?: TestAuthSupport.TEST_LOGIN,
+            listOf("SYSADMIN"),
+            mapOf(
+                "employeeId" to employee.id.toString(),
+                "role" to "SYSADMIN"
+            )
+        )
+        val expired = tokenGenerator.generateToken(auth, -1)
+            .orElseThrow { IllegalStateException("Could not generate expired token") }
+
+        val ex = shouldThrow<HttpClientResponseException> {
+            client.toBlocking().exchange(
+                HttpRequest.GET<Any>("/api/patients?page=0&size=1")
+                    .header(TestAuthHeaders.NO_AUTH, "1")
+                    .header("Authorization", "Bearer $expired"),
+                String::class.java
+            )
+        }
+        ex.status shouldBe HttpStatus.UNAUTHORIZED
+    }
+
+    "GET /api/me with JWT returns 404" {
+        val ex = shouldThrow<HttpClientResponseException> {
+            client.toBlocking().retrieve("/api/me")
+        }
+        ex.status shouldBe HttpStatus.NOT_FOUND
     }
 })

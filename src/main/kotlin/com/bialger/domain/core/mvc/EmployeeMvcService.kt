@@ -8,12 +8,15 @@ import com.bialger.domain.core.repository.EmployeeRoleRepository
 import com.bialger.domain.core.repository.EmployeeSpecialtyRepository
 import com.bialger.domain.core.repository.RoleRepository
 import com.bialger.domain.core.repository.SpecialtyRepository
-import com.bialger.security.PasswordHasher
+import com.bialger.auth.domain.PasswordHasher
 import com.bialger.web.DomainMvcEventEmitter
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import java.time.Instant
+import java.time.LocalTime
 import java.util.UUID
+
+private val ONLINE_BOOKING_ROLE_NAMES = listOf("DOCTOR", "HEAD")
 
 /**
  * Persists employee passwords as BCrypt hashes in [EmployeeEntity.passwordHash].
@@ -34,6 +37,23 @@ open class EmployeeMvcService(
 
     @Transactional(readOnly = true)
     open fun listAll(): List<EmployeeEntity> = employeeRepository.findAllOrdered()
+
+    /**
+     * Active staff with roles [DOCTOR] or [HEAD] linked to [branchId] (online booking).
+     */
+    @Transactional(readOnly = true)
+    open fun listForOnlineBooking(branchId: UUID): List<EmployeeEntity> {
+        val roleIds = ONLINE_BOOKING_ROLE_NAMES.mapNotNull { roleRepository.findByName(it)?.id }
+        if (roleIds.isEmpty()) return emptyList()
+        val employeeIds = roleIds.flatMap { rid ->
+            employeeRoleRepository.findByRoleId(rid).map { it.employeeId }
+        }.distinct()
+        if (employeeIds.isEmpty()) return emptyList()
+        val inBranch = employeeBranchRepository.findByBranchId(branchId).map { it.employeeId }.toSet()
+        return employeeRepository.findByIds(employeeIds)
+            .filter { it.isActive && it.id in inBranch }
+            .sortedBy { it.fullName }
+    }
 
     @Transactional(readOnly = true)
     open fun getById(id: UUID): EmployeeEntity? = employeeRepository.findById(id).orElse(null)
@@ -106,7 +126,9 @@ open class EmployeeMvcService(
         isActive: Boolean,
         specialtyIds: List<UUID>,
         branchIds: List<UUID>,
-        roleId: UUID
+        roleId: UUID,
+        workStartTime: LocalTime? = null,
+        workEndTime: LocalTime? = null
     ): EmployeeEntity {
         val name = fullName.trim()
         require(name.isNotEmpty()) { "Укажите ФИО" }
@@ -116,16 +138,21 @@ open class EmployeeMvcService(
         if (mail != null && employeeRepository.existsByEmail(mail)) {
             throw IllegalArgumentException("Email уже занят")
         }
+        val targetRole = roleRepository.findById(roleId).orElseThrow { IllegalArgumentException("Роль не найдена") }
         val id = UUID.randomUUID()
+        val (ws, we) = normalizeWorkHours(workStartTime, workEndTime)
         val entity = EmployeeEntity(
             id = id,
             fullName = name,
             email = mail,
             phone = phone?.trim()?.takeIf { it.isNotEmpty() },
             passwordHash = passwordHasher.hash(pwd),
+            mustChangePassword = targetRole.name == "SYSADMIN",
             isActive = isActive,
             createdAt = Instant.now(),
-            updatedAt = Instant.now()
+            updatedAt = Instant.now(),
+            workStartTime = ws,
+            workEndTime = we
         )
         employeeRepository.save(entity)
         syncSpecialties(id, specialtiesForRole(roleId, specialtyIds))
@@ -145,7 +172,9 @@ open class EmployeeMvcService(
         isActive: Boolean,
         specialtyIds: List<UUID>,
         branchIds: List<UUID>,
-        roleId: UUID
+        roleId: UUID,
+        workStartTime: LocalTime? = null,
+        workEndTime: LocalTime? = null
     ): EmployeeEntity {
         val existing = employeeRepository.findById(id).orElseThrow { IllegalArgumentException("Not found") }
         val name = fullName.trim()
@@ -156,13 +185,28 @@ open class EmployeeMvcService(
         }
         val newHash = passwordPlain?.trim()?.takeIf { it.isNotEmpty() }?.let { passwordHasher.hash(it) }
             ?: existing.passwordHash
+        val targetRole = roleRepository.findById(roleId).orElseThrow { IllegalArgumentException("Роль не найдена") }
+        val currentRoleName = employeeRoleRepository.findByEmployeeId(id).firstOrNull()
+            ?.roleId
+            ?.let { roleRepository.findById(it).orElse(null)?.name }
+        val passwordWasChanged = newHash != existing.passwordHash
+        val mustChangePassword = when {
+            targetRole.name != "SYSADMIN" -> false
+            currentRoleName != "SYSADMIN" -> true
+            passwordWasChanged -> true
+            else -> existing.mustChangePassword
+        }
+        val (ws, we) = normalizeWorkHours(workStartTime, workEndTime)
         val updated = existing.copy(
             fullName = name,
             email = mail,
             phone = phone?.trim()?.takeIf { it.isNotEmpty() },
             passwordHash = newHash,
+            mustChangePassword = mustChangePassword,
             isActive = isActive,
-            updatedAt = Instant.now()
+            updatedAt = Instant.now(),
+            workStartTime = ws,
+            workEndTime = we
         )
         employeeRepository.update(updated)
         syncSpecialties(id, specialtiesForRole(roleId, specialtyIds))
@@ -208,6 +252,15 @@ open class EmployeeMvcService(
         employeeRoleRepository.deleteByEmployeeId(employeeId)
         require(roleRepository.findById(roleId).isPresent) { "Роль не найдена" }
         employeeRoleRepository.save(employeeId, roleId)
+    }
+
+    private fun normalizeWorkHours(start: LocalTime?, end: LocalTime?): Pair<LocalTime?, LocalTime?> {
+        if (start == null && end == null) return null to null
+        require(start != null && end != null) {
+            "Укажите время приёма с и до или оставьте оба поля пустыми"
+        }
+        require(end > start) { "Время окончания приёма должно быть позже начала" }
+        return start to end
     }
 
     private object RolesWithoutSpecialty {

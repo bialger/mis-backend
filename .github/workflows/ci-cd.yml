@@ -42,6 +42,11 @@ jobs:
       MICRONAUT_DATASOURCES_DEFAULT_URL: jdbc:postgresql://localhost:5432/mis
       MICRONAUT_DATASOURCES_DEFAULT_USERNAME: mis
       MICRONAUT_DATASOURCES_DEFAULT_PASSWORD: mis
+      # Must match src/test/resources/application-test.properties and @MicronautTest @Property overrides
+      JWT_SECRET: test-jwt-secret-for-integration-tests-only-1234567890
+      JWT_COOKIE_SECURE: "false"
+      JWT_ACCESS_TOKEN_EXPIRATION: "28800"
+      APP_CORS_ALLOWED_ORIGINS: https://mis.bialger.com,http://localhost:3000,http://localhost:5173
 
     steps:
       - name: Checkout repository (with frontend submodule)
@@ -200,13 +205,13 @@ jobs:
           docker build -t ${{ env.MIS_IMAGE }} docker-context
           docker push ${{ env.MIS_IMAGE }}
 
-      - name: Upload docker-compose to server
+      - name: Upload Docker Compose and Caddy config to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ env.HOST }}
           username: ${{ secrets.SERVER_LOGIN }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "deploy/docker-compose.yml"
+          source: "deploy/docker-compose.yml,deploy/Caddyfile"
           target: "/opt/mis"
           strip_components: 1
           overwrite: true
@@ -218,13 +223,15 @@ jobs:
           SERVER_LOGIN: ${{ secrets.SERVER_LOGIN }}
           APP_PORT: ${{ env.APP_PORT }}
           MIS_IMAGE: ${{ env.MIS_IMAGE }}
+          DOMAIN_NAME: ${{ env.HOST }}
+          COMPOSE_PROFILES: https
           GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
           GHCR_USERNAME: ${{ github.repository_owner }}
         with:
           host: ${{ env.HOST }}
           username: ${{ secrets.SERVER_LOGIN }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          envs: SERVER_PASSWORD,SERVER_LOGIN,APP_PORT,MIS_IMAGE,GHCR_PULL_TOKEN,GHCR_USERNAME
+          envs: SERVER_PASSWORD,SERVER_LOGIN,APP_PORT,MIS_IMAGE,DOMAIN_NAME,COMPOSE_PROFILES,GHCR_PULL_TOKEN,GHCR_USERNAME
           script: |
             set -euo pipefail
             cd /opt/mis
@@ -234,6 +241,8 @@ jobs:
             fi
 
             export APP_PORT="${APP_PORT}"
+            export DOMAIN_NAME="${DOMAIN_NAME}"
+            export COMPOSE_PROFILES="${COMPOSE_PROFILES}"
             docker compose -f docker-compose.yml down --remove-orphans || true
             docker compose -f docker-compose.yml pull
             docker compose -f docker-compose.yml up -d

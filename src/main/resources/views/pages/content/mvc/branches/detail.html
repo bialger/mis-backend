@@ -7,6 +7,9 @@
         <p th:if="${organizationName != null}"><strong>Организация:</strong> <span th:text="${organizationName}"></span></p>
         <p th:if="${item.address != null}" style="white-space: pre-wrap" th:text="${item.address}"></p>
         <p th:if="${item.phone != null}"><strong>Тел.:</strong> <span th:text="${item.phone}"></span></p>
+        <p><strong>Время работы:</strong>
+            <span th:text="${#temporals.format(item.startTime, 'HH:mm')}"></span> —
+            <span th:text="${#temporals.format(item.endTime, 'HH:mm')}"></span></p>
         <p><strong>Активен:</strong> <span th:text="${item.isActive} ? 'да' : 'нет'"></span></p>
         <p>
             <a class="m-tab-button" th:href="@{/mvc/branches}">К списку</a>
@@ -14,18 +17,8 @@
             <button type="button" class="m-tab-button" th:attr="data-id=${item.id}" id="mvc-del">Удалить</button>
         </p>
     </div>
-    <script th:inline="javascript">
-        (function () {
-            const b = document.getElementById('mvc-del');
-            if (!b) return;
-            b.addEventListener('click', function () {
-                const id = b.getAttribute('data-id');
-                if (!id || !confirm('Удалить?')) return;
-                fetch('/mvc/branches/' + id, { method: 'DELETE' }).then(function () {
-                    window.location.href = '/mvc/branches';
-                });
-            });
-        })();
+    <script>
+        mvcWireDeleteButton('mvc-del', '/mvc/branches/', '/mvc/branches');
     </script>
 </section>
 </body>

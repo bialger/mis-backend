@@ -1,0 +1,1294 @@
+openapi: 3.1.0
+info:
+  title: MIS Backend HTTP API
+  version: "1.0"
+  description: |
+    Specification of **actual** Micronaut application paths (prefix `/api/...`, not `/api/v1`).
+    Complements the generated Swagger (`/swagger-ui`, build artifacts under `META-INF/swagger`).
+
+    ## Authentication
+    - **JWT Bearer**: `Authorization: Bearer <token>` (login response includes a `token` field).
+    - **Cookie**: HttpOnly `MIS_AUTH=<token>` (set on successful `/api/auth/login` and `/api/auth/first-password-change`).
+    - Anonymous: only `/api/auth/login`, `/api/auth/first-password-change`, and `GET`/`POST` under `/api/public/booking/**` (see `application.properties`).
+
+    ## REST access control (`ApiAccessControlFilter`, `/api/**`)
+    After authentication, most routes resolve to **exactly one** permission code (`x-required-permission`).
+    If the code is absent (`null`), being logged in is enough. If a code is present, it must be in the employee’s effective permission set (role ± overrides via `/api/access/...`).
+
+    Prefix → code mapping (`GET` vs everything else):
+    | Prefix / condition | GET | POST, PUT, PATCH, DELETE |
+    |---|---|---|
+    | `/api/shell/bootstrap?kind=…` | see `kind` below | — |
+    | `/api/access` | `permission.read` | `permission.write` |
+    | `/api/organizations` | `organization.read` | `organization.write` |
+    | `/api/branches` | `branch.read` | `branch.write` |
+    | `/api/employees` | `employee.read` | `employee.write` |
+    | `/api/system-settings` | `settings.view` | `settings.write` |
+    | `/api/catalog` | `settings.view` (all methods) | — |
+    | `/api/rooms` | `schedule.view` (all methods) | — |
+    | `/api/audit`… (including `/api/audit-logs`) | `audit.view` | — |
+    | `/api/reports` | `reports.view` | — |
+    | `/api/inventory`… (`inventory-items`, `inventory-operations`) | `inventory.view` | `inventory.write` |
+    | `/api/payments` | `finance.view` | `finance.write` |
+    | `/api/time-slots` | `schedule.view` (all methods) | — |
+    | `/api/appointments` | `appointments.view` (all methods) | — |
+    | `/api/patients`…, `/api/medical-records`…, `/api/attachments`… | `patients.view` (all methods) | — |
+
+    **`/api/shell/bootstrap`** — required query `kind`:
+    `dashboard`→`dashboard.view`; `patients`,`patient-detail`→`patients.view`; `doctors`→`doctors.view`;
+    `schedule`→`schedule.view`; `inventory`→`inventory.view`; `settings`→`settings.view`;
+    `appointments-list`,`appointment-detail`→`appointments.view`; `reports`→`reports.view`; `audit`→`audit.view`;
+    otherwise permission enforcement is **not** applied (`null`).
+
+    ## Special cases
+    - **`/api/grafana` and `/api/grafana/**`**: even with permissions — only **`SYSADMIN`** role (else 403 with Grafana message).
+    - **GraphQL** (`POST /graphql`): the table-based permission filter is **not** applied; authentication only. Schema: `src/main/resources/graphql/schema.graphqls`. GraphiQL: `GET /graphiql` (when enabled).
+    - **Permission codes** (canonical): see `components/schemas/PermissionCode` and `AccessPermissionCodes` in code.
+
+    ## Errors
+    - `401` — missing, invalid, or expired JWT.
+    - `403` — insufficient permission (`error: forbidden`, `message` with code or Grafana).
+    - Some endpoints return application-specific error bodies (see controller responses).
+
+    ## Pagination (Micronaut `Pageable`)
+    Where query `page` and `size` apply: standard paging; when multiple pages exist, a **Link** header may be present (see `PaginationLinks`).
+
+    ## Other non-REST
+    - **MVC JSON** (legacy bootstrap): `GET /mvc/shell/bootstrap` — same query params as `/api/shell/bootstrap`, JSON response (class hidden from Swagger via `@Hidden`).
+    - **CRM HTML pages**: `/`, `/login`, `/patients`, … — not OpenAPI; access via HTML filters and legacy permission maps (`HtmlPageAccessFilter`).
+servers:
+  - url: /
+    description: Application root (default port 8000, see `application.properties`)
+
+tags:
+  - name: Auth
+  - name: PublicBooking
+  - name: Shell
+  - name: Access
+  - name: Catalog
+  - name: Organizations
+  - name: Branches
+  - name: Employees
+  - name: Rooms
+  - name: SystemSettings
+  - name: Appointments
+  - name: TimeSlots
+  - name: Patients
+  - name: PatientConsents
+  - name: MedicalRecords
+  - name: Attachments
+  - name: Payments
+  - name: Inventory
+  - name: InventoryOperations
+  - name: Audit
+  - name: Reports
+  - name: GraphQL
+  - name: Meta
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+
+paths:
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Sign in (email + password)
+      description: Returns JWT in body and `MIS_AUTH` cookie. For SYSADMIN with `mustChangePassword`, only `passwordChangeRequired` is returned.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login, password]
+              properties:
+                login: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { description: Invalid credentials }
+
+  /api/auth/first-password-change:
+    post:
+      tags: [Auth]
+      summary: First-login password change (SYSADMIN)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login, password, newPassword]
+              properties:
+                login: { type: string }
+                password: { type: string }
+                newPassword: { type: string }
+      responses:
+        "200": { description: OK, cookie set }
+        "401": { description: Authorization error }
+        "409": { description: Password change not required }
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Clear authentication cookie
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "204": { description: No content }
+
+  /api/public/booking/branches:
+    get:
+      tags: [PublicBooking]
+      summary: Branches available for online booking
+      security: []
+      responses:
+        "200":
+          description: Branch list
+          content:
+            application/json:
+              schema: { type: array, items: { type: object } }
+
+  /api/public/booking/doctors:
+    get:
+      tags: [PublicBooking]
+      summary: Doctors for a branch
+      security: []
+      parameters:
+        - name: branchId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+        "400": { description: Invalid branchId }
+
+  /api/public/booking/slots:
+    get:
+      tags: [PublicBooking]
+      summary: Time slots for one day
+      security: []
+      parameters:
+        - name: branchId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: employeeId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: slotDate
+          in: query
+          required: true
+          schema: { type: string, description: ISO date }
+      responses:
+        "200": { description: OK }
+        "400": { description: Invalid parameters }
+
+  /api/public/booking/appointments:
+    post:
+      tags: [PublicBooking]
+      summary: Create patient and appointment (public booking)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Created }
+        "400": { description: Validation error }
+        "409": { description: Slot already taken }
+
+  /api/shell/bootstrap:
+    get:
+      tags: [Shell]
+      summary: CRM shell JSON (`kind`, lists, apiBase)
+      description: Permissions depend on query `kind` (see info section).
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema:
+            type: string
+            description: dashboard | patients | patient-detail | doctors | schedule | inventory | settings | appointments-list | appointment-detail | reports | audit | ...
+        - name: patientId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: appointmentId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Payload }
+        "400": { description: Unknown kind or invalid UUIDs }
+
+  /api/access/employees:
+    get:
+      tags: [Access]
+      summary: Employees for access-control management
+      x-required-permission: permission.read
+      responses:
+        "200": { description: OK }
+
+  /api/access/employees/{employeeId}/permissions:
+    get:
+      tags: [Access]
+      summary: Effective permissions for an employee
+      x-required-permission: permission.read
+      parameters:
+        - $ref: "#/components/parameters/employeeId"
+      responses:
+        "200": { description: OK }
+        "404": { description: Employee not found }
+    put:
+      tags: [Access]
+      summary: Update permission overrides
+      x-required-permission: permission.write
+      parameters:
+        - $ref: "#/components/parameters/employeeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+        "400": { description: Invalid payload }
+
+  /api/access/employees/{employeeId}/backdate-days:
+    get:
+      tags: [Access]
+      summary: Backdate editing limit (per account)
+      x-required-permission: permission.read
+      parameters:
+        - $ref: "#/components/parameters/employeeId"
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [Access]
+      summary: Set backdate limit
+      x-required-permission: permission.write
+      parameters:
+        - $ref: "#/components/parameters/employeeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                days: { type: integer, minimum: 0 }
+      responses:
+        "200": { description: OK }
+
+  /api/organizations:
+    get:
+      tags: [Organizations]
+      summary: List organizations
+      x-required-permission: organization.read
+      parameters:
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page }
+    post:
+      tags: [Organizations]
+      summary: Create organization
+      x-required-permission: organization.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/organizations/{id}:
+    get:
+      tags: [Organizations]
+      summary: Organization by id
+      x-required-permission: organization.read
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+        "404": { description: Not found }
+    patch:
+      tags: [Organizations]
+      summary: Update organization
+      x-required-permission: organization.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [Organizations]
+      summary: Delete organization
+      x-required-permission: organization.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "204": { description: Deleted }
+
+  /api/branches:
+    get:
+      tags: [Branches]
+      summary: List branches
+      x-required-permission: branch.read
+      parameters:
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page }
+    post:
+      tags: [Branches]
+      summary: Create branch
+      x-required-permission: branch.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/branches/{id}:
+    get:
+      tags: [Branches]
+      summary: Branch by id
+      x-required-permission: branch.read
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+    patch:
+      tags: [Branches]
+      summary: Update branch
+      x-required-permission: branch.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [Branches]
+      summary: Delete branch
+      x-required-permission: branch.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "204": { description: Deleted }
+
+  /api/employees/for-online-booking:
+    get:
+      tags: [Employees]
+      summary: Employees for online booking widget (no pagination)
+      x-required-permission: employee.read
+      parameters:
+        - name: branchId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /api/employees:
+    get:
+      tags: [Employees]
+      summary: List employees
+      x-required-permission: employee.read
+      parameters:
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page }
+    post:
+      tags: [Employees]
+      summary: Create employee
+      x-required-permission: employee.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/employees/{id}:
+    get:
+      tags: [Employees]
+      summary: Employee by id
+      x-required-permission: employee.read
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+    patch:
+      tags: [Employees]
+      summary: Update employee
+      x-required-permission: employee.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [Employees]
+      summary: Delete employee
+      x-required-permission: employee.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "204": { description: Deleted }
+
+  /api/rooms:
+    get:
+      tags: [Rooms]
+      summary: List rooms
+      x-required-permission: schedule.view
+      parameters:
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page }
+    post:
+      tags: [Rooms]
+      summary: Create room
+      x-required-permission: schedule.view
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/rooms/{id}:
+    get:
+      tags: [Rooms]
+      summary: Room by id
+      x-required-permission: schedule.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+    patch:
+      tags: [Rooms]
+      summary: Update room
+      x-required-permission: schedule.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [Rooms]
+      summary: Delete room
+      x-required-permission: schedule.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "204": { description: Deleted }
+
+  /api/catalog/services:
+    get:
+      tags: [Catalog]
+      summary: Medical services (price list)
+      x-required-permission: settings.view
+      responses:
+        "200": { description: OK }
+
+  /api/catalog/templates:
+    get:
+      tags: [Catalog]
+      summary: Document templates
+      x-required-permission: settings.view
+      responses:
+        "200": { description: OK }
+
+  /api/catalog/integrations:
+    get:
+      tags: [Catalog]
+      summary: Integrations
+      x-required-permission: settings.view
+      responses:
+        "200": { description: OK }
+
+  /api/catalog/patient-tag-types:
+    get:
+      tags: [Catalog]
+      summary: Patient tag types
+      x-required-permission: settings.view
+      responses:
+        "200": { description: OK }
+
+  /api/catalog/roles:
+    get:
+      tags: [Catalog]
+      summary: Roles (reference)
+      x-required-permission: settings.view
+      responses:
+        "200": { description: OK }
+
+  /api/system-settings:
+    get:
+      tags: [SystemSettings]
+      summary: List system settings
+      x-required-permission: settings.view
+      parameters:
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page }
+    post:
+      tags: [SystemSettings]
+      summary: Create setting
+      x-required-permission: settings.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/system-settings/{id}:
+    get:
+      tags: [SystemSettings]
+      summary: Setting by id
+      x-required-permission: settings.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+    patch:
+      tags: [SystemSettings]
+      summary: Update setting
+      x-required-permission: settings.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [SystemSettings]
+      summary: Delete setting
+      x-required-permission: settings.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "204": { description: Deleted }
+
+  /api/appointments:
+    get:
+      tags: [Appointments]
+      summary: List appointments (paginated)
+      x-required-permission: appointments.view
+      parameters:
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page, Link header when applicable }
+    post:
+      tags: [Appointments]
+      summary: Create appointment
+      x-required-permission: appointments.view
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/appointments/{id}:
+    get:
+      tags: [Appointments]
+      summary: Appointment by id
+      x-required-permission: appointments.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+        "404": { description: Not found }
+    patch:
+      tags: [Appointments]
+      summary: Update appointment
+      x-required-permission: appointments.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [Appointments]
+      summary: Delete appointment
+      x-required-permission: appointments.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "204": { description: Deleted }
+
+  /api/time-slots:
+    get:
+      tags: [TimeSlots]
+      summary: List time slots
+      x-required-permission: schedule.view
+      parameters:
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page }
+    post:
+      tags: [TimeSlots]
+      summary: Create time slot
+      x-required-permission: schedule.view
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/time-slots/for-online-booking:
+    get:
+      tags: [TimeSlots]
+      summary: Time slots for online booking (one day)
+      x-required-permission: schedule.view
+      parameters:
+        - name: branchId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: employeeId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: slotDate
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/time-slots/{id}:
+    get:
+      tags: [TimeSlots]
+      summary: Time slot by id
+      x-required-permission: schedule.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+    patch:
+      tags: [TimeSlots]
+      summary: Update time slot
+      x-required-permission: schedule.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [TimeSlots]
+      summary: Delete time slot
+      x-required-permission: schedule.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "204": { description: Deleted }
+
+  /api/patients:
+    get:
+      tags: [Patients]
+      summary: List patients
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page }
+    post:
+      tags: [Patients]
+      summary: Create patient
+      x-required-permission: patients.view
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/patients/{id}:
+    get:
+      tags: [Patients]
+      summary: Patient by id
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+    patch:
+      tags: [Patients]
+      summary: Update patient
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [Patients]
+      summary: Delete patient
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "204": { description: Deleted }
+
+  /api/patients/{id}/appointments:
+    get:
+      tags: [Patients]
+      summary: Patient appointments
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+
+  /api/patients/{id}/tags:
+    get:
+      tags: [Patients]
+      summary: Patient tags (types)
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [Patients]
+      summary: Replace tag set
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/patients/{patientId}/consents:
+    get:
+      tags: [PatientConsents]
+      summary: Patient consents
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/patientId"
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [PatientConsents]
+      summary: Create or update consent
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/patientId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [consentType, isGranted]
+              properties:
+                consentType: { type: string }
+                isGranted: { type: boolean }
+      responses:
+        "200": { description: OK }
+
+  /api/patients/{patientId}/consents/{consentId}:
+    patch:
+      tags: [PatientConsents]
+      summary: Update consent
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/patientId"
+        - name: consentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                consentType: { type: string }
+                isGranted: { type: boolean }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [PatientConsents]
+      summary: Delete consent record
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/patientId"
+        - name: consentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted }
+
+  /api/medical-records:
+    get:
+      tags: [MedicalRecords]
+      summary: List medical records by patientId
+      x-required-permission: patients.view
+      parameters:
+        - name: patientId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /api/medical-records/{id}:
+    get:
+      tags: [MedicalRecords]
+      summary: Medical record by id
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+    patch:
+      tags: [MedicalRecords]
+      summary: Update medical record fields
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/medical-records/ensure/{appointmentId}:
+    post:
+      tags: [MedicalRecords]
+      summary: Ensure medical record for visit (create if missing)
+      x-required-permission: patients.view
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /api/attachments:
+    get:
+      tags: [Attachments]
+      summary: List patient attachments
+      x-required-permission: patients.view
+      parameters:
+        - name: patientId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /api/attachments/upload:
+    post:
+      tags: [Attachments]
+      summary: Upload file (multipart)
+      description: Parts `file`, `patientId`; size and MIME limits — see `AttachmentApiController`.
+      x-required-permission: patients.view
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+                patientId: { type: string }
+      responses:
+        "200": { description: Attachment metadata }
+        "400": { description: Validation error }
+
+  /api/attachments/{id}/download:
+    get:
+      tags: [Attachments]
+      summary: Download file (proxied from storage)
+      x-required-permission: patients.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: Binary body, Content-Disposition }
+        "404": { description: Not found }
+
+  /api/payments:
+    get:
+      tags: [Payments]
+      summary: List payments (optional filter by appointmentId)
+      x-required-permission: finance.view
+      parameters:
+        - name: appointmentId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /api/payments/{id}:
+    patch:
+      tags: [Payments]
+      summary: Update payment
+      x-required-permission: finance.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/inventory-items:
+    get:
+      tags: [Inventory]
+      summary: List inventory items
+      x-required-permission: inventory.view
+      parameters:
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page }
+    post:
+      tags: [Inventory]
+      summary: Create item
+      x-required-permission: inventory.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/inventory-items/{id}:
+    get:
+      tags: [Inventory]
+      summary: Item by id
+      x-required-permission: inventory.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+    patch:
+      tags: [Inventory]
+      summary: Update item
+      x-required-permission: inventory.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [Inventory]
+      summary: Delete item
+      x-required-permission: inventory.write
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "204": { description: Deleted }
+
+  /api/inventory-operations:
+    get:
+      tags: [InventoryOperations]
+      summary: Inventory operations journal
+      x-required-permission: inventory.view
+      parameters:
+        - name: itemId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [InventoryOperations]
+      summary: Register operation (INCOMING, WRITE_OFF_MANUAL, …)
+      x-required-permission: inventory.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: OK }
+
+  /api/inventory-operations/{id}:
+    get:
+      tags: [InventoryOperations]
+      summary: Operation by id
+      x-required-permission: inventory.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+
+  /api/audit-logs:
+    get:
+      tags: [Audit]
+      summary: Audit log (filters entityType, entityId, employeeId, dates)
+      x-required-permission: audit.view
+      parameters:
+        - name: entityType
+          in: query
+          schema: { type: string }
+        - name: entityId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: employeeId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: dateFrom
+          in: query
+          schema: { type: string, format: date-time }
+        - name: dateTo
+          in: query
+          schema: { type: string, format: date-time }
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page }
+
+  /api/audit-logs/medical-records:
+    get:
+      tags: [Audit]
+      summary: Medical record audit trail
+      x-required-permission: audit.view
+      parameters:
+        - name: entityId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: dateFrom
+          in: query
+          schema: { type: string, format: date-time }
+        - name: dateTo
+          in: query
+          schema: { type: string, format: date-time }
+        - $ref: "#/components/parameters/pageablePage"
+        - $ref: "#/components/parameters/pageableSize"
+      responses:
+        "200": { description: Page }
+
+  /api/audit-logs/{id}:
+    get:
+      tags: [Audit]
+      summary: Audit log entry by id
+      x-required-permission: audit.view
+      parameters:
+        - $ref: "#/components/parameters/idUuid"
+      responses:
+        "200": { description: OK }
+
+  /api/reports/summary:
+    get:
+      tags: [Reports]
+      summary: Summary for reports screen
+      x-required-permission: reports.view
+      responses:
+        "200":
+          description: Counters and links to REST resources
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+
+  /graphql:
+    post:
+      tags: [GraphQL]
+      summary: GraphQL (queries/mutations)
+      description: |
+        Authentication required; **permission codes from `ApiAccessControlFilter` are not checked** for this path.
+        Typical body: `{ "query": "...", "variables": { } }`.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query: { type: string }
+                variables: { type: object, additionalProperties: true }
+                operationName: { type: string }
+      responses:
+        "200": { description: GraphQL JSON response }
+        "401": { description: Unauthorized }
+
+  /graphiql:
+    get:
+      tags: [GraphQL]
+      summary: GraphiQL UI
+      description: Available when `graphql.graphiql.enabled=true` (see `application.properties`).
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200": { description: HTML }
+
+  /mvc/shell/bootstrap:
+    get:
+      tags: [Shell]
+      summary: Legacy bootstrap JSON (same role as `/api/shell/bootstrap`)
+      description: |
+        Endpoint is `@Hidden` in code. Permissions are **not** applied via `requiredApiPermission` for `/mvc/**`
+        (filter only covers `/api/**`); standard Micronaut JWT authentication is required.
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema: { type: string }
+        - name: patientId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: appointmentId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Payload }
+        "400": { description: Invalid parameters }
+
+  /swagger-ui:
+    get:
+      tags: [Meta]
+      summary: Redirect to Swagger UI
+      description: Redirects to `/swagger-ui/index.html` (static UI + build-time spec).
+      responses:
+        "302": { description: Redirect }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token from `token` field in `/api/auth/login` response
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: MIS_AUTH
+      description: HttpOnly cookie (alternative to Bearer)
+
+  parameters:
+    idUuid:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    patientId:
+      name: patientId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    employeeId:
+      name: employeeId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    pageablePage:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 0 }
+      description: Page number (Micronaut Pageable)
+    pageableSize:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1 }
+      description: Page size
+
+  schemas:
+    PermissionCode:
+      type: string
+      description: Codes from DB/seeds (see `V25__seed_access_permissions_and_role_matrix.sql`, `AccessPermissionCodes`)
+      enum:
+        - dashboard.view
+        - posts.view
+        - patients.view
+        - doctors.view
+        - schedule.view
+        - appointments.view
+        - reports.view
+        - inventory.view
+        - inventory.write
+        - audit.view
+        - settings.view
+        - settings.write
+        - employee.read
+        - employee.write
+        - branch.read
+        - branch.write
+        - organization.read
+        - organization.write
+        - permission.read
+        - permission.write
+        - finance.view
+        - finance.write
+        - egisz.manual.send
+        - appointments.backdate.edit

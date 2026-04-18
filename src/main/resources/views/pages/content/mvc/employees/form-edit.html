@@ -30,6 +30,13 @@
                 </label>
             </th:block>
         </fieldset>
+        <p><label>Время приёма (онлайн-запись)<br>
+            <input name="workStartTime" type="time" style="max-width:8rem"
+                   th:value="${item.workStartTime != null ? #temporals.format(item.workStartTime, 'HH:mm') : ''}"> —
+            <input name="workEndTime" type="time" style="max-width:8rem"
+                   th:value="${item.workEndTime != null ? #temporals.format(item.workEndTime, 'HH:mm') : ''}">
+        </label></p>
+        <p class="m-section" style="font-size:0.9rem;opacity:0.85;">Пусто — действует расписание филиала; иначе пересечение с часами филиала.</p>
         <fieldset class="m-section" th:if="${branches != null}">
             <legend>Филиалы</legend>
             <th:block th:each="b : ${branches}">

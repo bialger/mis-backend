@@ -22,6 +22,7 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Patch
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.exceptions.HttpStatusException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -62,9 +63,16 @@ open class EmployeesApiController(
             roleLabel = roleEnt?.displayName ?: roleEnt?.name ?: "",
             specialtyIds = specIds,
             branchIds = branchIds,
-            branchScope = branchIds
+            branchScope = branchIds,
+            workStartTime = e.workStartTime?.toString(),
+            workEndTime = e.workEndTime?.toString()
         )
     }
+
+    @Get("/for-online-booking", produces = [MediaType.APPLICATION_JSON])
+    @Operation(summary = "Doctors / heads for online booking at a branch (no pagination)")
+    fun listForOnlineBooking(@QueryValue branchId: UUID): List<EmployeeRestDto> =
+        employeeMvcService.listForOnlineBooking(branchId).map { toDto(it) }
 
     @Get(produces = [MediaType.APPLICATION_JSON])
     @Operation(summary = "List employees (paginated)")
@@ -112,7 +120,9 @@ open class EmployeesApiController(
             isActive = dto.isActive,
             specialtyIds = dto.specialtyIds,
             branchIds = dto.branchIds,
-            roleId = dto.roleId
+            roleId = dto.roleId,
+            workStartTime = dto.workStartTime,
+            workEndTime = dto.workEndTime
         )
         return toDto(e)
     }
@@ -135,7 +145,9 @@ open class EmployeesApiController(
             isActive = dto.isActive,
             specialtyIds = dto.specialtyIds,
             branchIds = dto.branchIds,
-            roleId = dto.roleId
+            roleId = dto.roleId,
+            workStartTime = dto.workStartTime,
+            workEndTime = dto.workEndTime
         )
         return toDto(e)
     }
