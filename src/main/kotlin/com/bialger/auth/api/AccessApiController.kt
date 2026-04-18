@@ -52,15 +52,10 @@ open class AccessApiController(
     ): AccessEmployeePermissionsDto =
         accessControlAdminService.updateEmployeeOverrides(employeeId, request)
 
-    @Get("/employees/{employeeId}/backdate-days", produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Get per-account backdate editing limit")
-    open fun employeeBackdateDays(@PathVariable employeeId: UUID): AccessBackdateDaysDto =
-        accessControlAdminService.employeeBackdateDays(employeeId)
-
     @Put("/employees/{employeeId}/backdate-days", consumes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
-    @Operation(summary = "Set per-account backdate editing limit override")
+    @Operation(summary = "Set employee-level backdate days override (null = inherit role default)")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Updated limit payload"),
+        ApiResponse(responseCode = "200", description = "Updated backdate-days payload"),
         ApiResponse(responseCode = "400", description = "Invalid payload"),
         ApiResponse(responseCode = "404", description = "Employee not found")
     )

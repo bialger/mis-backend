@@ -4,8 +4,8 @@ import com.bialger.domain.core.entity.EmployeeEntity
 import com.bialger.domain.core.repository.EmployeePermissionRepository
 import com.bialger.domain.core.repository.EmployeeRoleRepository
 import com.bialger.domain.core.repository.PermissionRepository
+import com.bialger.domain.core.repository.RoleRepository
 import com.bialger.domain.core.repository.RolePermissionRepository
-import com.bialger.domain.system.repository.SystemSettingRepository
 import com.bialger.auth.domain.AccessPermissionCodes
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
@@ -15,9 +15,9 @@ import java.util.UUID
 open class AccessControlService(
     private val employeeRoleRepository: EmployeeRoleRepository,
     private val rolePermissionRepository: RolePermissionRepository,
+    private val roleRepository: RoleRepository,
     private val permissionRepository: PermissionRepository,
-    private val employeePermissionRepository: EmployeePermissionRepository,
-    private val systemSettingRepository: SystemSettingRepository
+    private val employeePermissionRepository: EmployeePermissionRepository
 ) {
 
     @Transactional(readOnly = true)
@@ -39,6 +39,11 @@ open class AccessControlService(
 
     @Transactional(readOnly = true)
     open fun resolveLegacyPermissionMap(employee: EmployeeEntity, effectiveCodes: Set<String>): Map<String, Any> {
+        val roleCode = resolveRoleCode(employee) ?: "STAFF"
+        val canReadPermissions =
+            roleCode in setOf("SYSADMIN", "HEAD") && AccessPermissionCodes.PERMISSION_READ in effectiveCodes
+        val canManagePermissions =
+            roleCode == "SYSADMIN" && AccessPermissionCodes.PERMISSION_WRITE in effectiveCodes
         return mapOf(
             "canViewDashboard" to (AccessPermissionCodes.DASHBOARD_VIEW in effectiveCodes),
             "canViewPosts" to (AccessPermissionCodes.POSTS_VIEW in effectiveCodes),
@@ -56,8 +61,8 @@ open class AccessControlService(
             "canManageBranches" to (AccessPermissionCodes.BRANCH_WRITE in effectiveCodes),
             "canReadOrganizations" to (AccessPermissionCodes.ORGANIZATION_READ in effectiveCodes),
             "canManageOrganizations" to (AccessPermissionCodes.ORGANIZATION_WRITE in effectiveCodes),
-            "canReadPermissions" to (AccessPermissionCodes.PERMISSION_READ in effectiveCodes),
-            "canManagePermissions" to (AccessPermissionCodes.PERMISSION_WRITE in effectiveCodes),
+            "canReadPermissions" to canReadPermissions,
+            "canManagePermissions" to canManagePermissions,
             "canManageSystemSettings" to (AccessPermissionCodes.SETTINGS_WRITE in effectiveCodes),
 
             "canViewFinance" to (AccessPermissionCodes.FINANCE_VIEW in effectiveCodes),
@@ -73,15 +78,16 @@ open class AccessControlService(
     open fun resolveBackdateDaysLimit(employee: EmployeeEntity, effectiveCodes: Set<String>): Int {
         val canBackdate = AccessPermissionCodes.APPOINTMENT_BACKDATE_EDIT in effectiveCodes
         if (!canBackdate) return 0
-        return employee.backdateDaysOverride?.coerceAtLeast(0) ?: globalBackdateDaysDefault()
+        return employee.backdateDaysOverride?.coerceAtLeast(0)
+            ?: roleBackdateDays(resolveRoleCode(employee.id))
     }
 
     @Transactional(readOnly = true)
-    open fun globalBackdateDaysDefault(): Int {
-        val raw = systemSettingRepository.findByBranchIdAndKey(null, "canEditBackdateDays")
-            ?.value
-            ?.trim()
-        return raw?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+    open fun roleBackdateDays(roleCode: String?): Int = when (roleCode) {
+        "HEAD" -> 3650
+        "DOCTOR" -> 60
+        "ADMIN" -> 30
+        else -> 0
     }
 
     @Transactional(readOnly = true)
@@ -126,8 +132,8 @@ open class AccessControlService(
         if (path == "/api/system-settings" || path.startsWith("/api/system-settings/")) {
             return if (upper == "GET") AccessPermissionCodes.SETTINGS_VIEW else AccessPermissionCodes.SETTINGS_WRITE
         }
-        if (path.startsWith("/api/catalog/")) {
-            return AccessPermissionCodes.SETTINGS_VIEW
+        if (path == "/api/catalog" || path.startsWith("/api/catalog/")) {
+            return if (upper == "GET") AccessPermissionCodes.SETTINGS_VIEW else AccessPermissionCodes.SETTINGS_WRITE
         }
         if (path == "/api/rooms" || path.startsWith("/api/rooms/")) {
             return AccessPermissionCodes.SCHEDULE_VIEW
@@ -183,6 +189,16 @@ open class AccessControlService(
             .mapNotNull { permissionById[it.permissionId]?.code }
             .toSet()
     }
+
+    @Transactional(readOnly = true)
+    open fun resolveRoleCode(employee: EmployeeEntity): String? = resolveRoleCode(employee.id)
+
+    @Transactional(readOnly = true)
+    open fun resolveRoleCode(employeeId: UUID): String? =
+        employeeRoleRepository.findByEmployeeId(employeeId)
+            .firstOrNull()
+            ?.roleId
+            ?.let { roleRepository.findById(it).orElse(null)?.name }
 
     private fun Map<String, Any>.bool(key: String): Boolean = this[key] as? Boolean == true
 }

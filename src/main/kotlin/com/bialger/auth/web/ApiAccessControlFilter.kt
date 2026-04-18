@@ -43,6 +43,24 @@ class ApiAccessControlFilter(
                 )
             )
         }
+        if (isAccessControlApiPath(request.path)) {
+            val canReadAccess = context.roleCode == "SYSADMIN" || context.roleCode == "HEAD"
+            val canWriteAccess = context.roleCode == "SYSADMIN"
+            val allowed = when (request.method) {
+                HttpMethod.GET -> canReadAccess
+                else -> canWriteAccess
+            }
+            if (!allowed) {
+                return Flux.just(
+                    HttpResponse.status<ApiErrorResponse>(HttpStatus.FORBIDDEN).body(
+                        ApiErrorResponse(
+                            error = "forbidden",
+                            message = "Access permissions are available only for SYSADMIN and HEAD (write: SYSADMIN only)"
+                        )
+                    )
+                )
+            }
+        }
         val requiredCode = accessControlService.requiredApiPermission(
             path = request.path,
             method = request.methodName,
@@ -66,4 +84,7 @@ class ApiAccessControlFilter(
 
     private fun isGrafanaApiPath(path: String): Boolean =
         path == "/api/grafana" || path.startsWith("/api/grafana/")
+
+    private fun isAccessControlApiPath(path: String): Boolean =
+        path == "/api/access" || path.startsWith("/api/access/")
 }

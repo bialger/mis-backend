@@ -69,11 +69,19 @@ class SystemSettingMvcService(
                 "canManualEgiszSend" to true,
                 "canEditBackdateDays" to 3650
             )
-            else -> mapOf(
+            "ADMIN" -> mapOf(
                 "canViewFinance" to true,
                 "canEditFinance" to true,
                 "canViewInventory" to true,
                 "canWriteInventory" to true,
+                "canManualEgiszSend" to true,
+                "canEditBackdateDays" to 30
+            )
+            else -> mapOf(
+                "canViewFinance" to false,
+                "canEditFinance" to false,
+                "canViewInventory" to false,
+                "canWriteInventory" to false,
                 "canManualEgiszSend" to false,
                 "canEditBackdateDays" to 0
             )

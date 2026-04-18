@@ -45,10 +45,18 @@ data class AccessEmployeePermissionsDto(
 @Introspected
 @Schema(description = "Per-account limit for backdate editing")
 data class AccessBackdateDaysDto(
-    val globalDefaultDays: Int,
-    val employeeOverrideDays: Int?,
+    val roleCode: String,
+    val roleDefaultDays: Int,
+    val employeeOverrideDays: Int? = null,
     val effectiveDays: Int,
     val canUseBackdateEditing: Boolean
+)
+
+@Serdeable
+@Introspected
+@Schema(description = "Update employee-level backdate days override. null = inherit from role")
+data class AccessBackdateDaysUpdateRequestDto(
+    @field:Min(0) val days: Int? = null
 )
 
 @Serdeable
@@ -72,11 +80,4 @@ data class AccessPermissionOverrideUpsertDto(
 @Schema(description = "Batch of account-level overrides for one employee")
 data class AccessEmployeeOverrideUpdateRequestDto(
     @field:NotEmpty val overrides: List<@Valid AccessPermissionOverrideUpsertDto>
-)
-
-@Serdeable
-@Introspected
-@Schema(description = "Set per-account backdate limit override (null = inherit global default)")
-data class AccessBackdateDaysUpdateRequestDto(
-    @field:Min(0) val days: Int?
 )

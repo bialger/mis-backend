@@ -26,6 +26,8 @@
                th:classappend="${activePage == 'audit'} ? ' is-active-link'">Аудит</a></li>
         <li><a th:href="@{/settings}" class="is-hoverable-link"
                th:classappend="${activePage == 'settings'} ? ' is-active-link'">Настройки</a></li>
+        <li><a th:href="@{/profile}" class="is-hoverable-link"
+               th:classappend="${activePage == 'profile'} ? ' is-active-link'">Личный кабинет</a></li>
         <li><a th:href="@{/appointments}" class="is-hoverable-link"
                th:classappend="${activePage == 'appointments'} ? ' is-active-link'">Записи на услуги</a></li>
     </th:block>

@@ -112,6 +112,14 @@ class PageController(
         extra = crmShellPageData.settingsExtras()
     )
 
+    @Get("/profile")
+    fun profile(): ModelAndView<Map<String, Any>> = frontendPage(
+        title = "Медицинская CRM - Личные настройки",
+        activePage = "profile",
+        frontendFile = "profile.html",
+        pageScript = "profile-app.js"
+    )
+
     @Get("/appointments")
     fun appointments(): ModelAndView<Map<String, Any>> = frontendPage(
         title = "Медицинская CRM - Записи на услуги",
@@ -155,6 +163,7 @@ class PageController(
             "inventory" -> "/inventory"
             "audit" -> "/audit"
             "settings" -> "/settings"
+            "profile" -> "/profile"
             "appointment" -> "/appointments"
             "appointment-detail" -> if (!id.isNullOrBlank()) "/appointments/$id" else "/appointments"
             "patient-booking" -> "/patient-booking"
@@ -290,7 +299,6 @@ class PageController(
             ?: return emptyList()
         val items = listOf(
             Triple("dashboard", "/", "canViewDashboard"),
-            Triple("posts", "/posts", "canViewPosts"),
             Triple("patients", "/patients", "canViewPatients"),
             Triple("doctors", "/doctors", "canViewDoctors"),
             Triple("schedule", "/schedule", "canViewSchedule"),
@@ -298,11 +306,11 @@ class PageController(
             Triple("reports", "/reports", "canViewReports"),
             Triple("inventory", "/inventory", "canViewInventory"),
             Triple("audit", "/audit", "canViewAudit"),
-            Triple("settings", "/settings", "canViewSettings")
+            Triple("settings", "/settings", "canViewSettings"),
+            Triple("profile", "/profile", "always")
         )
         val labels = mapOf(
             "dashboard" to "Панель управления",
-            "posts" to "Посты",
             "patients" to "Пациенты",
             "doctors" to "Врачи",
             "schedule" to "Расписание",
@@ -310,9 +318,12 @@ class PageController(
             "reports" to "Отчеты",
             "inventory" to "Склад",
             "audit" to "Аудит",
-            "settings" to "Настройки"
+            "settings" to "Настройки",
+            "profile" to "Личный кабинет"
         )
-        return items.filter { (_, _, key) -> permissions[key] as? Boolean == true }
+        return items.filter { (_, _, key) ->
+            key == "always" || permissions[key] as? Boolean == true
+        }
             .map { (id, path, _) ->
                 mapOf(
                     "key" to id,

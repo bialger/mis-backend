@@ -10,10 +10,10 @@ import java.util.UUID
 @JdbcRepository(dialect = Dialect.POSTGRES)
 interface EmployeeRepository : CrudRepository<EmployeeEntity, UUID> {
 
-    @Query("SELECT * FROM employee ORDER BY full_name")
+    @Query("SELECT * FROM employee ORDER BY full_name, id")
     fun findAllOrdered(): List<EmployeeEntity>
 
-    @Query("SELECT * FROM employee ORDER BY full_name LIMIT :limit")
+    @Query("SELECT * FROM employee ORDER BY full_name, id LIMIT :limit")
     fun findTopOrdered(limit: Int): List<EmployeeEntity>
 
     @Query("SELECT * FROM employee WHERE id IN (:ids)")

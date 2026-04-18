@@ -125,25 +125,20 @@ open class AccessControlAdminService(
         return employeePermissions(employee.id)
     }
 
-    @Transactional(readOnly = true)
-    open fun employeeBackdateDays(employeeId: UUID): AccessBackdateDaysDto {
-        val employee = findEmployeeOrThrow(employeeId)
-        ensureSysadminPermissionsMutable(employee.id)
-        val effectiveCodes = accessControlService.resolveEffectivePermissionCodes(employee)
-        return backdateDaysDto(employee, effectiveCodes)
-    }
-
     @Transactional
     open fun updateEmployeeBackdateDays(employeeId: UUID, days: Int?): AccessBackdateDaysDto {
         val employee = findEmployeeOrThrow(employeeId)
         ensureSysadminPermissionsMutable(employee.id)
-        val normalized = days?.coerceAtLeast(0)
-        if (employee.backdateDaysOverride != normalized) {
-            employeeRepository.update(employee.copy(backdateDaysOverride = normalized))
+        val normalizedDays = days?.coerceAtLeast(0)
+        val updated = if (employee.backdateDaysOverride != normalizedDays) {
+            val next = employee.copy(backdateDaysOverride = normalizedDays)
+            employeeRepository.update(next)
+            next
+        } else {
+            employee
         }
-        val reloaded = findEmployeeOrThrow(employee.id)
-        val effectiveCodes = accessControlService.resolveEffectivePermissionCodes(reloaded)
-        return backdateDaysDto(reloaded, effectiveCodes)
+        val effectiveCodes = accessControlService.resolveEffectivePermissionCodes(updated)
+        return backdateDaysDto(updated, effectiveCodes)
     }
 
     private fun upsertOverride(
@@ -195,11 +190,14 @@ open class AccessControlAdminService(
             .firstOrNull()
             ?.let { roleById[it.roleId] ?: roleRepository.findById(it.roleId).orElse(null) }
 
-    private fun backdateDaysDto(employee: EmployeeEntity, effectiveCodes: Set<String>): AccessBackdateDaysDto =
-        AccessBackdateDaysDto(
-            globalDefaultDays = accessControlService.globalBackdateDaysDefault(),
+    private fun backdateDaysDto(employee: EmployeeEntity, effectiveCodes: Set<String>): AccessBackdateDaysDto {
+        val roleCode = accessControlService.resolveRoleCode(employee) ?: "STAFF"
+        return AccessBackdateDaysDto(
+            roleCode = roleCode,
+            roleDefaultDays = accessControlService.roleBackdateDays(roleCode),
             employeeOverrideDays = employee.backdateDaysOverride?.coerceAtLeast(0),
             effectiveDays = accessControlService.resolveBackdateDaysLimit(employee, effectiveCodes),
             canUseBackdateEditing = AccessPermissionCodes.APPOINTMENT_BACKDATE_EDIT in effectiveCodes
         )
+    }
 }
