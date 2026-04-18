@@ -3,10 +3,12 @@ package com.bialger.api
 import com.bialger.domain.clinical.repository.MedicalRecordRepository
 import com.bialger.domain.patient.repository.PatientRepository
 import com.bialger.domain.scheduling.repository.AppointmentRepository
+import com.bialger.domain.system.repository.AuditLogRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotContain
+import io.micronaut.data.model.Pageable
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
@@ -31,7 +33,8 @@ class TransactionIsolationTest(
     private val objectMapper: ObjectMapper,
     private val patientRepository: PatientRepository,
     private val appointmentRepository: AppointmentRepository,
-    private val medicalRecordRepository: MedicalRecordRepository
+    private val medicalRecordRepository: MedicalRecordRepository,
+    private val auditLogRepository: AuditLogRepository
 ) : StringSpec({
 
     val createdPatientIds = mutableListOf<UUID>()
@@ -105,6 +108,11 @@ class TransactionIsolationTest(
         createdPatientIds.forEach { runCatching { patientRepository.deleteById(it) } }
         createdPatientIds.clear()
         createdEmployeeIds.forEach {
+            runCatching {
+                auditLogRepository.findByEmployeeId(it, Pageable.from(0, 1000))
+                    .content
+                    .forEach { log -> auditLogRepository.deleteById(log.id) }
+            }
             runCatching { client.toBlocking().exchange<Any, Any>(HttpRequest.DELETE("/api/employees/$it")) }
         }
         createdEmployeeIds.clear()

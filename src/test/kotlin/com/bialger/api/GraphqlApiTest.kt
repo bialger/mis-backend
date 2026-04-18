@@ -12,6 +12,7 @@ import com.bialger.domain.core.repository.OrganizationRepository
 import com.bialger.domain.core.repository.RoomRepository
 import com.bialger.domain.patient.repository.PatientRepository
 import com.bialger.domain.scheduling.repository.AppointmentRepository
+import com.bialger.domain.system.repository.AuditLogRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -21,6 +22,9 @@ import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import io.micronaut.test.extensions.kotest5.annotation.MicronautTest
+import io.micronaut.transaction.SynchronousTransactionManager
+import io.micronaut.data.model.Pageable
+import java.sql.Connection
 import java.time.Instant
 import java.util.UUID
 
@@ -33,7 +37,9 @@ class GraphqlApiTest(
     private val branchRepository: BranchRepository,
     private val roomRepository: RoomRepository,
     private val patientRepository: PatientRepository,
-    private val appointmentRepository: AppointmentRepository
+    private val appointmentRepository: AppointmentRepository,
+    private val auditLogRepository: AuditLogRepository,
+    private val transactionManager: SynchronousTransactionManager<Connection>
 ) : StringSpec({
     val createdOrganizationIds = linkedSetOf<UUID>()
     val createdEmployeeIds = linkedSetOf<UUID>()
@@ -121,7 +127,7 @@ class GraphqlApiTest(
         return id
     }
 
-    fun createOrganizationId(): UUID {
+    fun createOrganizationId(): UUID = transactionManager.executeWrite {
         val now = Instant.now()
         val suffix = (System.nanoTime() % 1_000_000).toString().padStart(6, '0')
         val org = OrganizationEntity(
@@ -134,10 +140,10 @@ class GraphqlApiTest(
         )
         organizationRepository.save(org)
         createdOrganizationIds += org.id
-        return org.id
+        org.id
     }
 
-    fun createEmployeeId(): UUID {
+    fun createEmployeeId(): UUID = transactionManager.executeWrite {
         val now = Instant.now()
         val employee = EmployeeEntity(
             id = UUID.randomUUID(),
@@ -152,10 +158,10 @@ class GraphqlApiTest(
         )
         employeeRepository.save(employee)
         createdEmployeeIds += employee.id
-        return employee.id
+        employee.id
     }
 
-    fun createBranchId(organizationId: UUID): UUID {
+    fun createBranchId(organizationId: UUID): UUID = transactionManager.executeWrite {
         val branch = BranchEntity(
             id = UUID.randomUUID(),
             organizationId = organizationId,
@@ -167,10 +173,10 @@ class GraphqlApiTest(
         )
         branchRepository.save(branch)
         createdBranchIds += branch.id
-        return branch.id
+        branch.id
     }
 
-    fun createRoomId(branchId: UUID): UUID {
+    fun createRoomId(branchId: UUID): UUID = transactionManager.executeWrite {
         val room = RoomEntity(
             id = UUID.randomUUID(),
             branchId = branchId,
@@ -180,26 +186,37 @@ class GraphqlApiTest(
         )
         roomRepository.save(room)
         createdRoomIds += room.id
-        return room.id
+        room.id
     }
 
     fun cleanupCreatedTestData() {
-        createdAppointmentIds.forEach { id -> runCatching { appointmentRepository.deleteById(id) } }
+        fun safeWrite(block: () -> Unit) {
+            runCatching { transactionManager.executeWrite { block() } }
+        }
+
+        createdAppointmentIds.forEach { id -> safeWrite { appointmentRepository.deleteById(id) } }
         createdAppointmentIds.clear()
 
-        createdPatientIds.forEach { id -> runCatching { patientRepository.deleteById(id) } }
+        createdPatientIds.forEach { id -> safeWrite { patientRepository.deleteById(id) } }
         createdPatientIds.clear()
 
-        createdRoomIds.forEach { id -> runCatching { roomRepository.deleteById(id) } }
+        createdRoomIds.forEach { id -> safeWrite { roomRepository.deleteById(id) } }
         createdRoomIds.clear()
 
-        createdBranchIds.forEach { id -> runCatching { branchRepository.deleteById(id) } }
+        createdBranchIds.forEach { id -> safeWrite { branchRepository.deleteById(id) } }
         createdBranchIds.clear()
 
-        createdEmployeeIds.forEach { id -> runCatching { employeeRepository.deleteById(id) } }
+        createdEmployeeIds.forEach { id ->
+            safeWrite {
+                auditLogRepository.findByEmployeeId(id, Pageable.from(0, 1000))
+                    .content
+                    .forEach { log -> auditLogRepository.deleteById(log.id) }
+            }
+            safeWrite { employeeRepository.deleteById(id) }
+        }
         createdEmployeeIds.clear()
 
-        createdOrganizationIds.forEach { id -> runCatching { organizationRepository.deleteById(id) } }
+        createdOrganizationIds.forEach { id -> safeWrite { organizationRepository.deleteById(id) } }
         createdOrganizationIds.clear()
     }
 

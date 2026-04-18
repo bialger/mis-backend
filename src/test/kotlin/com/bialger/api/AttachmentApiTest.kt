@@ -4,6 +4,7 @@ import com.bialger.domain.attachment.repository.AttachmentRepository
 import com.bialger.domain.core.repository.EmployeeRepository
 import com.bialger.domain.patient.repository.PatientRepository
 import com.bialger.infrastructure.StorageServiceStub
+import com.bialger.support.TestAuthSupport
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
@@ -34,15 +35,6 @@ class AttachmentApiTest(
     val createdEmployeeIds = mutableListOf<UUID>()
 
     /**
-     * Returns the first available role ID from /api/catalog/roles (seeded by V15).
-     */
-    fun roleId(): String {
-        val resp = client.toBlocking().retrieve("/api/catalog/roles")
-        val arr = objectMapper.readTree(resp)
-        return arr[0].path("id").asText()
-    }
-
-    /**
      * Returns the organizationId from seeded branches (V15 seeds a default org + branch).
      * Falls back to the well-known seeded org UUID if the API returns nothing.
      */
@@ -71,25 +63,13 @@ class AttachmentApiTest(
     }
 
     /**
-     * Creates an employee via HTTP API (ensures the record is committed before further requests).
+     * Uses the auto-auth integration user as upload actor.
      */
     fun createEmployee(): String {
-        val suffix = UUID.randomUUID().toString().take(8)
-        val body = """
-            {
-              "fullName": "AttachUploader-$suffix",
-              "email": "uploader-$suffix@test.mis",
-              "password": "Test1234!",
-              "isActive": true,
-              "roleId": "${roleId()}"
-            }
-        """.trimIndent()
-        val resp = client.toBlocking().retrieve(
-            HttpRequest.POST("/api/employees", body).contentType(MediaType.APPLICATION_JSON)
-        )
-        val id = objectMapper.readTree(resp).path("id").asText()
-        runCatching { createdEmployeeIds += UUID.fromString(id) }
-        return id
+        return employeeRepository.findByEmail(TestAuthSupport.TEST_LOGIN)
+            ?.id
+            ?.toString()
+            ?: error("Test auth user is missing: ${TestAuthSupport.TEST_LOGIN}")
     }
 
     afterTest {
