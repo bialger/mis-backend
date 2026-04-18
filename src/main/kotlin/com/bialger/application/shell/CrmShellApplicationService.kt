@@ -7,7 +7,7 @@ import com.bialger.api.dto.BranchRestDto
 import com.bialger.api.dto.EmployeeRestDto
 import com.bialger.api.dto.InventoryItemRestDto
 import com.bialger.api.dto.MeRestDto
-import com.bialger.api.dto.MeUserDto
+import com.bialger.auth.application.CurrentUserContextService
 import com.bialger.api.dto.PatientRestDto
 import com.bialger.api.dto.PaymentRestDto
 import com.bialger.api.dto.ReportsApiLinkDto
@@ -94,7 +94,8 @@ class CrmShellApplicationService(
     private val serviceRepository: ServiceRepository,
     private val templateRepository: TemplateRepository,
     private val integrationRepository: IntegrationRepository,
-    private val inventoryCategoryRepository: InventoryCategoryRepository
+    private val inventoryCategoryRepository: InventoryCategoryRepository,
+    private val currentUserContextService: CurrentUserContextService
 ) {
 
     // ── Public payload methods (used by CrmShellPageData + ShellBootstrapApiController) ──
@@ -318,7 +319,7 @@ class CrmShellApplicationService(
             "medicalRecord" to mrMap,
             "statusHistory" to statusHistory,
             "me" to meVm(),
-            "permissions" to systemSettingMvcService.resolvePermissions(currentRoleCode())
+            "permissions" to currentPermissions()
         )
     }
 
@@ -346,7 +347,7 @@ class CrmShellApplicationService(
         "categories" to inventoryCategoryRepository.findAllOrdered().map { c ->
             mapOf("id" to c.id.toString(), "name" to c.name)
         },
-        "permissions" to systemSettingMvcService.resolvePermissions(currentRoleCode())
+        "permissions" to currentPermissions()
     )
 
     fun settingsPayload(): Map<String, Any?> = mapOf(
@@ -355,7 +356,13 @@ class CrmShellApplicationService(
         "me" to meVm(),
         "branches" to branchesVm(),
         "organizations" to organizationRepository.findAllOrdered().map { o ->
-            mapOf("id" to o.id.toString(), "name" to o.name)
+            mapOf(
+                "id" to o.id.toString(),
+                "name" to o.name,
+                "codeOkpo" to (o.codeOkpo ?: ""),
+                "codeOkud" to (o.codeOkud ?: ""),
+                "address" to (o.address ?: "")
+            )
         },
         "employees" to usersVm(),
         "rooms" to roomsVm(),
@@ -369,7 +376,7 @@ class CrmShellApplicationService(
         "specialties" to specialtyRepository.findAllOrdered().map { s ->
             mapOf("id" to s.id.toString(), "name" to s.name)
         },
-        "sections" to settingsSectionsVm(),
+        "sections" to settingsSectionsVm(currentPermissions()),
         "catalog" to catalogPayload(),
         "systemSettings" to systemSettingMvcService.listAll().map { s ->
             SystemSettingRestDto(
@@ -380,7 +387,7 @@ class CrmShellApplicationService(
                 description = s.description ?: ""
             )
         },
-        "permissions" to systemSettingMvcService.resolvePermissions(currentRoleCode())
+        "permissions" to currentPermissions()
     )
 
     fun reportsPayload(): Map<String, Any?> {
@@ -448,8 +455,6 @@ class CrmShellApplicationService(
             "appointments" to appts
         )
     }
-
-    fun mePayload(): MeRestDto = meVm()
 
     fun bootstrapPayload(kind: String, patientId: UUID?, appointmentId: UUID?): Map<String, Any?> =
         when (kind) {
@@ -618,35 +623,9 @@ class CrmShellApplicationService(
         )
     }
 
-    private fun currentRoleCode(): String {
-        val sysadmin = employeeRepository.findByEmail("sysadmin")
-        val u = sysadmin ?: employeeRepository.findAllOrdered().firstOrNull()
-        return u?.let { emp ->
-            val roleId = employeeRoleRepository.findByEmployeeId(emp.id).firstOrNull()?.roleId
-            roleId?.let { roleRepository.findById(it).orElse(null) }?.name
-        } ?: "SYSADMIN"
-    }
+    private fun currentPermissions(): Map<String, Any> = currentUserContextService.currentOrThrow().permissions
 
-    private fun meVm(): MeRestDto {
-        val sysadmin = employeeRepository.findByEmail("sysadmin")
-        val u = sysadmin ?: employeeRepository.findAllOrdered().firstOrNull()
-        val branches = branchRepository.findAllOrdered().map { it.id.toString() }
-        val roleCode = u?.let { emp ->
-            val roleId = employeeRoleRepository.findByEmployeeId(emp.id).firstOrNull()?.roleId
-            roleId?.let { roleRepository.findById(it).orElse(null) }?.name
-        } ?: "SYSADMIN"
-        val perms = systemSettingMvcService.resolvePermissions(roleCode)
-        return MeRestDto(
-            user = MeUserDto(
-                id = u?.id?.toString() ?: "00000000-0000-0000-0000-000000000001",
-                name = u?.fullName ?: "Пользователь",
-                role = roleCode,
-                login = u?.email ?: "sysadmin"
-            ),
-            branchScope = if (branches.isNotEmpty()) branches else listOf("00000000-0000-0000-0000-000000000001"),
-            permissions = perms
-        )
-    }
+    private fun meVm(): MeRestDto = currentUserContextService.currentOrThrow().toMeDto()
 
     private fun branchesVm(): List<BranchRestDto> {
         val orgNames = organizationRepository.findAllOrdered().associate { it.id to it.name }
@@ -736,21 +715,51 @@ class CrmShellApplicationService(
         )
     }
 
-    private fun settingsSectionsVm(): List<Map<String, String>> = listOf(
-        mapOf("id" to "employees", "label" to "Пользователи", "apiPath" to "/api/employees", "tab" to "org"),
-        mapOf("id" to "branches", "label" to "Филиалы", "apiPath" to "/api/branches", "tab" to "org"),
-        mapOf("id" to "rooms", "label" to "Кабинеты", "apiPath" to "/api/rooms", "tab" to "org"),
-        mapOf("id" to "services", "label" to "Услуги", "apiPath" to "/api/catalog/services", "tab" to "clinical"),
-        mapOf("id" to "templates", "label" to "Шаблоны", "apiPath" to "/api/catalog/templates", "tab" to "clinical"),
-        mapOf("id" to "patient-tag-types", "label" to "Значки пациентов", "apiPath" to "/api/catalog/patient-tag-types", "tab" to "clinical"),
-        mapOf("id" to "integrations", "label" to "Интеграции", "apiPath" to "/api/catalog/integrations", "tab" to "org"),
-        mapOf("id" to "time-slots", "label" to "Слоты расписания", "apiPath" to "/api/time-slots", "tab" to "clinical"),
-        mapOf("id" to "patients", "label" to "Пациенты", "apiPath" to "/api/patients", "tab" to "clinical"),
-        mapOf("id" to "appointments", "label" to "Записи", "apiPath" to "/api/appointments", "tab" to "clinical"),
-        mapOf("id" to "inventory", "label" to "Склад (ТМЦ)", "apiPath" to "/api/inventory-items", "tab" to "finance"),
-        mapOf("id" to "audit", "label" to "Журнал аудита", "apiPath" to "/api/audit-logs", "tab" to "finance"),
-        mapOf("id" to "reports-summary", "label" to "Сводка отчётов", "apiPath" to "/api/reports/summary", "tab" to "finance")
-    )
+    private fun settingsSectionsVm(permissions: Map<String, Any>): List<Map<String, String>> {
+        fun allow(key: String): Boolean = permissions[key] as? Boolean == true
+        val sections = mutableListOf<Map<String, String>>()
+
+        if (allow("canReadOrganizations")) {
+            sections += mapOf("id" to "organizations", "label" to "Организации", "apiPath" to "/api/organizations", "tab" to "org")
+        }
+        if (allow("canReadBranches")) {
+            sections += mapOf("id" to "branches", "label" to "Филиалы", "apiPath" to "/api/branches", "tab" to "org")
+        }
+        if (allow("canReadEmployees")) {
+            sections += mapOf("id" to "employees", "label" to "Пользователи", "apiPath" to "/api/employees", "tab" to "org")
+        }
+        if (allow("canReadPermissions")) {
+            sections += mapOf("id" to "access-permissions", "label" to "Права доступа", "apiPath" to "/api/access", "tab" to "org")
+        }
+
+        if (allow("canViewSchedule")) {
+            sections += mapOf("id" to "rooms", "label" to "Кабинеты", "apiPath" to "/api/rooms", "tab" to "clinical")
+            sections += mapOf("id" to "time-slots", "label" to "Слоты расписания", "apiPath" to "/api/time-slots", "tab" to "clinical")
+        }
+        if (allow("canViewPatients")) {
+            sections += mapOf("id" to "patients", "label" to "Пациенты", "apiPath" to "/api/patients", "tab" to "clinical")
+        }
+        if (allow("canViewAppointments")) {
+            sections += mapOf("id" to "appointments", "label" to "Записи", "apiPath" to "/api/appointments", "tab" to "clinical")
+        }
+        if (allow("canViewSettings")) {
+            sections += mapOf("id" to "services", "label" to "Услуги", "apiPath" to "/api/catalog/services", "tab" to "clinical")
+            sections += mapOf("id" to "templates", "label" to "Шаблоны", "apiPath" to "/api/catalog/templates", "tab" to "clinical")
+            sections += mapOf("id" to "patient-tag-types", "label" to "Значки пациентов", "apiPath" to "/api/catalog/patient-tag-types", "tab" to "clinical")
+            sections += mapOf("id" to "integrations", "label" to "Интеграции", "apiPath" to "/api/catalog/integrations", "tab" to "org")
+        }
+
+        if (allow("canViewInventory")) {
+            sections += mapOf("id" to "inventory", "label" to "Склад (ТМЦ)", "apiPath" to "/api/inventory-items", "tab" to "finance")
+        }
+        if (allow("canViewAudit")) {
+            sections += mapOf("id" to "audit", "label" to "Журнал аудита", "apiPath" to "/api/audit-logs", "tab" to "finance")
+        }
+        if (allow("canViewReports")) {
+            sections += mapOf("id" to "reports-summary", "label" to "Сводка отчётов", "apiPath" to "/api/reports/summary", "tab" to "finance")
+        }
+        return sections
+    }
 
     private fun catalogPayload(): Map<String, Any?> = mapOf(
         "services" to serviceRepository.findAllOrdered().map { s ->

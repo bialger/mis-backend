@@ -12,4 +12,10 @@ interface EmployeePermissionRepository : CrudRepository<EmployeePermissionEntity
     fun findByEmployeeId(employeeId: UUID): List<EmployeePermissionEntity>
 
     fun findByPermissionId(permissionId: UUID): List<EmployeePermissionEntity>
+
+    fun findByEmployeeIdAndPermissionId(employeeId: UUID, permissionId: UUID): EmployeePermissionEntity?
+
+    fun deleteByEmployeeIdAndPermissionId(employeeId: UUID, permissionId: UUID)
+
+    fun deleteByEmployeeId(employeeId: UUID)
 }

@@ -1,5 +1,6 @@
 package com.bialger
 
+import com.bialger.auth.application.CurrentUserContextService
 import com.bialger.web.CrmShellPageData
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.annotation.Controller
@@ -17,7 +18,8 @@ import java.util.UUID
 @Hidden
 @Controller
 class PageController(
-    private val crmShellPageData: CrmShellPageData
+    private val crmShellPageData: CrmShellPageData,
+    private val currentUserContextService: CurrentUserContextService
 ) {
 
     @Get("/")
@@ -193,6 +195,8 @@ class PageController(
         publicLayout: Boolean = false,
         extra: Map<String, Any> = emptyMap()
     ): ModelAndView<Map<String, Any>> {
+        val navItems = currentNavItems()
+        val quickActions = currentQuickActions(navItems)
         val model = mutableMapOf<String, Any>(
             "title" to title,
             "activePage" to activePage,
@@ -203,7 +207,9 @@ class PageController(
             "showSidebar" to showSidebar,
             "publicLayout" to publicLayout,
             "currentYear" to 2026,
-            "lastUpdated" to LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+            "lastUpdated" to LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")),
+            "navItems" to navItems,
+            "quickActions" to quickActions
         )
 
         if (pageScript != null) {
@@ -277,5 +283,48 @@ class PageController(
             return null
         }
         return html.substring(start, end).trim()
+    }
+
+    private fun currentNavItems(): List<Map<String, String>> {
+        val permissions = runCatching { currentUserContextService.currentOrThrow().permissions }.getOrNull()
+            ?: return emptyList()
+        val items = listOf(
+            Triple("dashboard", "/", "canViewDashboard"),
+            Triple("posts", "/posts", "canViewPosts"),
+            Triple("patients", "/patients", "canViewPatients"),
+            Triple("doctors", "/doctors", "canViewDoctors"),
+            Triple("schedule", "/schedule", "canViewSchedule"),
+            Triple("appointments", "/appointments", "canViewAppointments"),
+            Triple("reports", "/reports", "canViewReports"),
+            Triple("inventory", "/inventory", "canViewInventory"),
+            Triple("audit", "/audit", "canViewAudit"),
+            Triple("settings", "/settings", "canViewSettings")
+        )
+        val labels = mapOf(
+            "dashboard" to "Панель управления",
+            "posts" to "Посты",
+            "patients" to "Пациенты",
+            "doctors" to "Врачи",
+            "schedule" to "Расписание",
+            "appointments" to "Записи на услуги",
+            "reports" to "Отчеты",
+            "inventory" to "Склад",
+            "audit" to "Аудит",
+            "settings" to "Настройки"
+        )
+        return items.filter { (_, _, key) -> permissions[key] as? Boolean == true }
+            .map { (id, path, _) ->
+                mapOf(
+                    "key" to id,
+                    "path" to path,
+                    "label" to (labels[id] ?: id)
+                )
+            }
+    }
+
+    private fun currentQuickActions(navItems: List<Map<String, String>>): List<Map<String, String>> {
+        val preferredOrder = listOf("/patients", "/appointments", "/schedule", "/reports")
+        val byPath = navItems.associateBy { it["path"] }
+        return preferredOrder.mapNotNull { byPath[it] }
     }
 }

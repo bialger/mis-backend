@@ -1,4 +1,4 @@
-package com.bialger.security
+package com.bialger.auth.domain
 
 import jakarta.inject.Singleton
 import org.mindrot.jbcrypt.BCrypt

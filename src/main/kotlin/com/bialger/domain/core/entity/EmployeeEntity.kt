@@ -13,6 +13,9 @@ data class EmployeeEntity(
     val email: String? = null,
     val phone: String? = null,
     val passwordHash: String,
+    val mustChangePassword: Boolean = false,
+    /** Optional per-account override for backdate editing window (days). Null = inherit global default. */
+    val backdateDaysOverride: Int? = null,
     val isActive: Boolean = true,
     val digitalSignature: ByteArray? = null,
     val createdAt: Instant? = null,
