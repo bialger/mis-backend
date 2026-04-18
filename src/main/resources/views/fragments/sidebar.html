@@ -3,7 +3,12 @@
 <body>
 <aside class="m-aside" th:fragment="appSidebar(activePage)">
     <h3>Быстрые действия</h3>
-    <ul>
+    <ul th:if="${quickActions != null}">
+        <li th:each="item : ${quickActions}">
+            <a th:href="${item.path}" class="is-hoverable-link" th:text="${item.label}">Быстрое действие</a>
+        </li>
+    </ul>
+    <ul th:unless="${quickActions != null}">
         <li><a th:href="@{/patients}" class="is-hoverable-link">Найти пациента</a></li>
         <li><a th:href="@{/appointments}" class="is-hoverable-link">Создать запись</a></li>
         <li><a th:href="@{/schedule}" class="is-hoverable-link">Просмотреть расписание</a></li>

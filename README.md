@@ -101,12 +101,84 @@ Backend for Medical Information System powered by Kotlin and Micronaut
 
 ---
 
+## Authentication and Access
+
+Backend auth is JWT in `Cookie + Bearer` mode:
+
+- browser flows use HttpOnly cookie `MIS_AUTH`
+- API clients/tests can use `Authorization: Bearer <token>`
+- access token TTL default is 8 hours
+- refresh token is disabled
+
+### Auth endpoints
+
+- `POST /api/auth/login`
+  - request: `{"login":"employee@email","password":"..."}`
+  - response:
+    - normal flow: JWT token in JSON + `Set-Cookie: MIS_AUTH=...`
+    - first sysadmin login: `{"passwordChangeRequired":true}` (no token/cookie yet)
+- `POST /api/auth/first-password-change`
+  - request: `{"login":"sysadmin@mis.local","password":"current","newPassword":"new-secret"}`
+  - response: JWT token in JSON + `Set-Cookie: MIS_AUTH=...`
+- `POST /api/auth/logout`
+  - clears auth cookie (`204 No Content`)
+
+`GET /api/me` is removed. Current user context is derived from JWT + DB and returned via shell/bootstrap payloads.
+
+Built-in account on fresh DB:
+
+- login: `sysadmin@mis.local`
+- initial password: `sysadmin@mis.local`
+- first login requires password rotation via `/api/auth/first-password-change`
+
+### Access matrix
+
+Public routes:
+
+- `GET /login`
+- `GET /patient-booking`
+- `GET /assets/**`
+- `POST /api/auth/login`
+- `GET /api/public/booking/**`
+- `POST /api/public/booking/appointments`
+- preflight `OPTIONS /**`
+
+JWT-protected routes:
+
+- all other `/api/**`
+- `/graphql`, `/graphiql`
+- `/mvc/**`, `/posts/**`
+- internal CRM pages (`/`, `/patients`, `/appointments`, ...)
+- `/swagger/**`, `/swagger-ui/**`
+
+Without token:
+
+- protected API/GraphQL returns `401`
+- protected internal HTML pages redirect to `/login`
+
+### Public booking API
+
+- `GET /api/public/booking/branches`
+- `GET /api/public/booking/doctors?branchId=...`
+- `GET /api/public/booking/slots?branchId=...&employeeId=...&slotDate=YYYY-MM-DD`
+- `POST /api/public/booking/appointments`
+
+Slot collision on booking returns `409 Conflict`.
+
+### CORS
+
+- enabled via `micronaut.server.cors.enabled=true`
+- allowlist from `APP_CORS_ALLOWED_ORIGINS` (comma-separated)
+- credentials enabled (`allow-credentials=true`), so wildcard origin is not used
+
+---
+
 ## Deployment (Docker)
 
 The server must have an **`.env`** file in the same directory as `docker-compose.yml`. Docker Compose loads `.env` from the project directory when you run it.
 
 **Where to put .env on the server:**  
-Create **`/opt/mis/.env`** (next to `docker-compose.yml`). See `deploy/.env.example` for a template. The file must include **`MIS_IMAGE`**, **`APP_PORT`**, and **`DOMAIN_NAME`** (example: `MIS_IMAGE=ghcr.io/is-web-y27/m3301-bigulov-backend:latest`, `DOMAIN_NAME=mis.bialger.com`).
+Create **`/opt/mis/.env`** (next to `docker-compose.yml`). See `deploy/.env.example` for a template. The file must include **`MIS_IMAGE`**, **`APP_PORT`**, **`DOMAIN_NAME`**, **`JWT_SECRET`**, and DB credentials.
 
 HTTPS is terminated by **Caddy** on ports **80/443** and proxied to the app container on port `8000`.  
 For certificate issuance/renewal, make sure:
@@ -170,6 +242,10 @@ Defined at the top of the workflow under `env:`; override or set in repository/e
 | `GRADLE_JAVA_VERSION` | `21`              | JDK version used by the Gradle build.            |
 | `HOST`                | `mis.bialger.com` | Deployment server hostname (SSH/SCP).            |
 | `APP_PORT`            | `8000`            | Local host port for direct app access (`127.0.0.1:APP_PORT -> app:8000`). |
+| `JWT_SECRET`          | `ci-jwt-secret-...` | JWT secret for CI test runtime.                  |
+| `JWT_COOKIE_SECURE`   | `false`           | Cookie secure flag for CI (HTTP test environment). |
+| `JWT_ACCESS_TOKEN_EXPIRATION` | `28800`   | Access token TTL in seconds for CI runtime.      |
+| `APP_CORS_ALLOWED_ORIGINS` | `https://mis.bialger.com,http://localhost:3000,http://localhost:5173` | CORS allowlist used in CI runtime. |
 
 The Docker image name is derived from the repository: `ghcr.io/<owner>/<repo>:latest` (lowercase).
 
