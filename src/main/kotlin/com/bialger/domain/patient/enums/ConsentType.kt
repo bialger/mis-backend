@@ -1,12 +1,12 @@
 package com.bialger.domain.patient.enums
 
 enum class ConsentType {
-    /** Добровольное информированное согласие на медицинское вмешательство (ФЗ-323) */
+    /** Voluntary informed consent for medical intervention (FZ-323). */
     MEDICAL_INTERVENTION,
-    /** Согласие на обработку персональных данных (ФЗ-152) */
+    /** Consent to personal data processing (FZ-152). */
     PERSONAL_DATA_PROCESSING,
-    /** Передача данных в государственные органы (ЕГИСЗ и пр.) */
+    /** Transfer of data to government systems (EGISZ, etc.). */
     GOV_DATA_TRANSFER,
-    /** Согласие на маркетинговые коммуникации */
+    /** Consent to marketing communications. */
     MARKETING
 }

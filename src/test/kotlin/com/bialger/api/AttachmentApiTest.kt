@@ -238,7 +238,7 @@ class AttachmentApiTest(
         val disposition = response.headers.get("Content-Disposition") ?: ""
         // RFC 5987: filename*=UTF-8'' + percent-encoded name
         disposition shouldContain "filename*=UTF-8''"
-        disposition shouldContain "%D0%BE%D1%82%D1%87%D1%91%D1%82"   // «отчёт» encoded
+        disposition shouldContain "%D0%BE%D1%82%D1%87%D1%91%D1%82"   // Cyrillic word for report in filename, URL-encoded
     }
 
     "GET /api/attachments/{id}/download for unknown id returns 404" {

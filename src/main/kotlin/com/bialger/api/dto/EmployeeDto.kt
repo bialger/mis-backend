@@ -25,7 +25,7 @@ data class EmployeeRestDto(
     val roleId: String,
     /** Role code name, e.g. "HEAD", "DOCTOR". */
     val roleCode: String,
-    /** Role display label, e.g. "Главврач". */
+    /** Role display label, e.g. "Chief physician". */
     val roleLabel: String,
     val specialtyIds: List<String>,
     val branchIds: List<String>,
