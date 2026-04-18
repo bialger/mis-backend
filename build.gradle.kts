@@ -39,6 +39,7 @@ dependencies {
     implementation(platform("software.amazon.awssdk:bom:2.26.12"))
     implementation("software.amazon.awssdk:s3")
     implementation("io.micronaut.graphql:micronaut-graphql")
+    implementation("io.micronaut.security:micronaut-security-jwt")
     implementation("io.projectreactor:reactor-core:3.6.14")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
     implementation("io.micronaut.openapi:micronaut-openapi-annotations")
