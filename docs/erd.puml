@@ -1,0 +1,695 @@
+@startuml MIS_ERD
+!theme plain
+skinparam linetype ortho
+skinparam dpi 150
+skinparam defaultFontSize 11
+skinparam entityFontSize 12
+skinparam entityHeaderBackgroundColor #E8EAF6
+skinparam entityBackgroundColor #FAFAFA
+skinparam packageBackgroundColor #F5F5F5
+skinparam arrowColor #546E7A
+
+title Medical Information System (MIS) — ERD
+
+' ============================================================
+' 1. ORGANIZATION & STRUCTURE
+' ============================================================
+
+package "Organization & structure" as org_pkg #E3F2FD {
+
+    entity "Organization" as organization {
+        * id : UUID <<PK>>
+        --
+        * name : VARCHAR(255)
+        code_okpo : VARCHAR(20)
+        code_okud : VARCHAR(20)
+        address : TEXT
+        created_at : TIMESTAMPTZ <<V20>>
+    }
+
+    entity "Branch" as branch {
+        * id : UUID <<PK>>
+        --
+        * organization_id : UUID <<FK>>
+        * name : VARCHAR(255)
+        address : TEXT
+        phone : VARCHAR(50)
+        is_active : BOOLEAN
+        created_at : TIMESTAMPTZ <<V20>>
+        start_time : TIME DEFAULT 08:00 <<V19>>
+        end_time : TIME DEFAULT 20:00 <<V19>>
+    }
+
+    entity "Room" as room {
+        * id : UUID <<PK>>
+        --
+        * branch_id : UUID <<FK>>
+        * name : VARCHAR(100)
+        description : TEXT
+        is_active : BOOLEAN
+    }
+
+    organization ||--o{ branch
+    branch ||--o{ room
+}
+
+' ============================================================
+' 2. USERS & ROLES
+' ============================================================
+
+package "Users & roles" as user_pkg #E8F5E9 {
+
+    entity "Employee" as employee {
+        * id : UUID <<PK>>
+        --
+        * full_name : VARCHAR(255)
+        * email : VARCHAR(255) <<UNIQUE>>
+        phone : VARCHAR(50)
+        * password_hash : VARCHAR(255)
+        is_active : BOOLEAN
+        digital_signature : BYTEA
+        must_change_password : BOOLEAN DEFAULT false <<V24>>
+        work_start_time : TIME <<V23>>
+        work_end_time : TIME <<V23>>
+        backdate_days_override : INTEGER <<V26 CHECK >=0>>
+        created_at : TIMESTAMPTZ <<V20>>
+        updated_at : TIMESTAMPTZ <<V20>>
+    }
+
+    entity "Specialty" as specialty {
+        * id : UUID <<PK>>
+        --
+        * name : VARCHAR(100) <<UNIQUE>>
+        description : TEXT
+    }
+
+    entity "Role" as role {
+        * id : UUID <<PK>>
+        --
+        * name : VARCHAR(50) <<UNIQUE>>
+        display_name : VARCHAR(100)
+        description : TEXT
+    }
+
+    note right of role
+        Seeded roles (V15, V16); matrix (V25):
+        DOCTOR, ADMIN, NURSE, HEAD,
+        SYSADMIN (orgs/branches/accounts/permissions)
+    end note
+
+    entity "Permission" as permission {
+        * id : UUID <<PK>>
+        --
+        * code : VARCHAR(100) <<UNIQUE>>
+        name : VARCHAR(255)
+        description : TEXT
+    }
+
+    entity "EmployeeSpecialty" as employee_specialty {
+        * employee_id : UUID <<FK>>
+        * specialty_id : UUID <<FK>>
+    }
+
+    entity "EmployeeBranch" as employee_branch {
+        * employee_id : UUID <<FK>>
+        * branch_id : UUID <<FK>>
+    }
+
+    entity "EmployeeRole" as employee_role {
+        * employee_id : UUID <<FK>>
+        * role_id : UUID <<FK>>
+    }
+
+    entity "RolePermission" as role_permission {
+        * role_id : UUID <<FK>>
+        * permission_id : UUID <<FK>>
+    }
+
+    entity "EmployeePermission" as employee_permission {
+        * id : UUID <<PK>>
+        --
+        * employee_id : UUID <<FK>>
+        * permission_id : UUID <<FK>>
+        * is_granted : BOOLEAN
+    }
+
+    note right of employee_permission
+        UNIQUE(employee_id, permission_id) — V25
+    end note
+
+    employee ||--o{ employee_specialty
+    specialty ||--o{ employee_specialty
+
+    employee ||--o{ employee_branch
+    branch ||--o{ employee_branch
+
+    employee ||--o{ employee_role
+    role ||--o{ employee_role
+
+    role ||--o{ role_permission
+    permission ||--o{ role_permission
+
+    employee ||--o{ employee_permission
+    permission ||--o{ employee_permission
+}
+
+' ============================================================
+' 3. PATIENTS
+' ============================================================
+
+package "Patients" as patient_pkg #FFF3E0 {
+
+    entity "Patient" as patient {
+        * id : UUID <<PK>>
+        --
+        * card_number : VARCHAR(50) <<UNIQUE>>
+        * organization_id : UUID <<FK>>
+        * full_name : VARCHAR(255)
+        gender : ENUM(M, F)
+        birth_date : DATE
+        registration_address : TEXT
+        residence_address : TEXT
+        phone : VARCHAR(50)
+        email : VARCHAR(255)
+        locality_type : ENUM(URBAN, RURAL)
+        citizenship : VARCHAR(100)
+        identity_document : VARCHAR(255)
+        oms_policy : VARCHAR(50)
+        snils : VARCHAR(20)
+        insurance_organization : VARCHAR(255)
+        contact_person : VARCHAR(255)
+        guardian : VARCHAR(255)
+        profession : VARCHAR(255)
+        workplace : VARCHAR(255)
+        created_at : TIMESTAMPTZ <<V20>>
+        updated_at : TIMESTAMPTZ <<V20>>
+    }
+
+    entity "PatientTagType" as patient_tag_type {
+        * id : UUID <<PK>>
+        --
+        * code : VARCHAR(50) <<UNIQUE>>
+        icon : VARCHAR(10)
+        * name : VARCHAR(100)
+        description : TEXT
+        is_active : BOOLEAN
+    }
+
+    entity "PatientTag" as patient_tag {
+        * id : UUID <<PK>>
+        --
+        * patient_id : UUID <<FK>>
+        * tag_type_id : UUID <<FK>>
+        * created_by : UUID <<FK>>
+        created_at : TIMESTAMPTZ <<V20>>
+    }
+
+    entity "PatientConsent" as patient_consent {
+        * id : UUID <<PK>>
+        --
+        * patient_id : UUID <<FK>>
+        * consent_type : ENUM(MEDICAL_INTERVENTION, PERSONAL_DATA_PROCESSING, GOV_DATA_TRANSFER, MARKETING) <<V1,V22>>
+        * is_granted : BOOLEAN
+        granted_at : TIMESTAMPTZ <<V20>>
+        revoked_at : TIMESTAMPTZ <<V20>>
+    }
+
+    organization ||--o{ patient
+    patient ||--o{ patient_tag
+    patient_tag_type ||--o{ patient_tag
+    employee ||--o{ patient_tag : created_by
+    patient ||--o{ patient_consent
+}
+
+' ============================================================
+' 4. SCHEDULE & VISITS
+' ============================================================
+
+package "Schedule & visits" as schedule_pkg #F3E5F5 {
+
+    entity "TimeSlot" as time_slot {
+        * id : UUID <<PK>>
+        --
+        * employee_id : UUID <<FK>>
+        * room_id : UUID <<FK>>
+        * branch_id : UUID <<FK>>
+        * slot_date : DATE
+        * start_time : TIME
+        * end_time : TIME
+        is_available : BOOLEAN
+    }
+
+    entity "Appointment" as appointment {
+        * id : UUID <<PK>>
+        --
+        * patient_id : UUID <<FK>>
+        * employee_id : UUID <<FK>>
+        time_slot_id : UUID <<FK>>
+        * branch_id : UUID <<FK>>
+        * room_id : UUID <<FK>>
+        * status : ENUM
+        * source : ENUM(ONLINE, MANUAL)
+        notes : TEXT
+        created_by : UUID <<FK>>
+        created_at : TIMESTAMPTZ <<V20>>
+        updated_at : TIMESTAMPTZ <<V20>>
+    }
+
+    employee ||--o{ time_slot
+    room ||--o{ time_slot
+    branch ||--o{ time_slot
+
+    patient ||--o{ appointment
+    employee ||--o{ appointment
+    time_slot |o--o| appointment
+    branch ||--o{ appointment
+    room ||--o{ appointment
+    employee |o--o{ appointment : created_by
+}
+
+' ============================================================
+' 5. MEDICAL RECORDS
+' ============================================================
+
+package "Medical records" as medical_pkg #FFEBEE {
+
+    entity "MedicalRecord" as medical_record {
+        * id : UUID <<PK>>
+        --
+        * appointment_id : UUID <<FK>>
+        * patient_id : UUID <<FK>>
+        * employee_id : UUID <<FK>>
+        complaints : TEXT
+        anamnesis : TEXT
+        examination_results : TEXT
+        disease_course : TEXT
+        procedures : TEXT
+        epicrisis : TEXT
+        template_id : UUID <<FK>>
+        is_signed : BOOLEAN
+        signature_data : BYTEA
+        signed_at : TIMESTAMPTZ <<V20>>
+        created_at : TIMESTAMPTZ <<V20>>
+        updated_at : TIMESTAMPTZ <<V20>>
+    }
+
+    entity "Diagnosis" as diagnosis {
+        * id : UUID <<PK>>
+        --
+        * medical_record_id : UUID <<FK>>
+        code : VARCHAR(20)
+        * name : VARCHAR(255)
+        description : TEXT
+        is_primary : BOOLEAN
+    }
+
+    entity "Prescription" as prescription {
+        * id : UUID <<PK>>
+        --
+        * medical_record_id : UUID <<FK>>
+        * type : ENUM
+        * description : TEXT
+        created_at : TIMESTAMPTZ <<V20>>
+    }
+
+    entity "Template" as template {
+        * id : UUID <<PK>>
+        --
+        * name : VARCHAR(255)
+        * type : ENUM
+        specialty_id : UUID <<FK>>
+        employee_id : UUID <<FK>>
+        * content : TEXT
+        is_active : BOOLEAN
+        created_at : TIMESTAMPTZ <<V20>>
+        updated_at : TIMESTAMPTZ <<V20>>
+    }
+
+    entity "InsertSheet" as insert_sheet {
+        * id : UUID <<PK>>
+        --
+        * patient_id : UUID <<FK>>
+        * appointment_id : UUID <<FK>>
+        * employee_id : UUID <<FK>>
+        * form_type : VARCHAR(100)
+        content : TEXT
+        created_at : TIMESTAMPTZ <<V20>>
+        updated_at : TIMESTAMPTZ <<V20>>
+    }
+
+    appointment ||--o{ medical_record
+    patient ||--o{ medical_record
+    employee ||--o{ medical_record
+    template |o--o{ medical_record
+
+    medical_record ||--o{ diagnosis
+    medical_record ||--o{ prescription
+
+    specialty |o--o{ template
+    employee |o--o{ template : personal
+
+    patient ||--o{ insert_sheet
+    appointment ||--o{ insert_sheet
+    employee ||--o{ insert_sheet
+}
+
+' ============================================================
+' 6. LABORATORY
+' ============================================================
+
+package "Laboratory" as lab_pkg #E0F7FA {
+
+    entity "Laboratory" as laboratory {
+        * id : UUID <<PK>>
+        --
+        * name : VARCHAR(255)
+        integration_type : VARCHAR(100)
+        config : JSONB
+        is_active : BOOLEAN
+    }
+
+    entity "LabTest" as lab_test {
+        * id : UUID <<PK>>
+        --
+        * name : VARCHAR(255)
+        description : TEXT
+        price : DECIMAL(12,2)
+        laboratory_id : UUID <<FK>>
+        is_active : BOOLEAN
+    }
+
+    entity "LabOrder" as lab_order {
+        * id : UUID <<PK>>
+        --
+        * medical_record_id : UUID <<FK>>
+        * patient_id : UUID <<FK>>
+        * employee_id : UUID <<FK>>
+        total_price : DECIMAL(12,2)
+        * status : ENUM
+        created_at : TIMESTAMPTZ <<V20>>
+    }
+
+    entity "LabOrderItem" as lab_order_item {
+        * id : UUID <<PK>>
+        --
+        * lab_order_id : UUID <<FK>>
+        * lab_test_id : UUID <<FK>>
+        price : DECIMAL(12,2)
+    }
+
+    entity "LabResult" as lab_result {
+        * id : UUID <<PK>>
+        --
+        * lab_order_item_id : UUID <<FK>>
+        result_data : TEXT
+        * source : ENUM(MANUAL, INTEGRATION)
+        received_at : TIMESTAMPTZ <<V20>>
+        is_sent_to_gov : BOOLEAN
+        sent_to_gov_at : TIMESTAMPTZ <<V20>>
+        sent_to_gov_by : UUID <<FK>>
+    }
+
+    laboratory ||--o{ lab_test
+    medical_record ||--o{ lab_order
+    patient ||--o{ lab_order
+    employee ||--o{ lab_order
+
+    lab_order ||--o{ lab_order_item
+    lab_test ||--o{ lab_order_item
+    lab_order_item ||--o| lab_result
+    employee |o--o{ lab_result : sent_to_gov_by
+}
+
+' ============================================================
+' 7. FINANCE
+' ============================================================
+
+package "Finance" as finance_pkg #FFF9C4 {
+
+    entity "Service" as service {
+        * id : UUID <<PK>>
+        --
+        * name : VARCHAR(255)
+        * price : DECIMAL(12,2)
+        cost_price : DECIMAL(12,2)
+        branch_id : UUID <<FK>>
+        is_active : BOOLEAN
+    }
+
+    entity "AppointmentService" as appointment_service {
+        * id : UUID <<PK>>
+        --
+        * appointment_id : UUID <<FK>>
+        * service_id : UUID <<FK>>
+        quantity : INT
+        price : DECIMAL(12,2)
+    }
+
+    entity "Payment" as payment {
+        * id : UUID <<PK>>
+        --
+        * appointment_id : UUID <<FK>>
+        * amount : DECIMAL(12,2)
+        paid_amount : DECIMAL(12,2)
+        * payment_method : ENUM
+        * payment_status : ENUM
+        notes : TEXT
+        * created_by : UUID <<FK>>
+        created_at : TIMESTAMPTZ <<V20>>
+    }
+
+    note right of payment
+        paid_amount (V16): exact amount paid
+        for PARTIAL payments; NULL = not recorded
+    end note
+
+    entity "SalaryRecord" as salary_record {
+        * id : UUID <<PK>>
+        --
+        * employee_id : UUID <<FK>>
+        * branch_id : UUID <<FK>>
+        * period_start : DATE
+        * period_end : DATE
+        hours_worked : DECIMAL(6,2)
+        shifts_count : INT
+        amount : DECIMAL(12,2)
+        created_at : TIMESTAMPTZ <<V20>>
+    }
+
+    branch |o--o{ service
+    appointment ||--o{ appointment_service
+    service ||--o{ appointment_service
+
+    appointment ||--o{ payment
+    employee ||--o{ payment : created_by
+
+    employee ||--o{ salary_record
+    branch ||--o{ salary_record
+}
+
+' ============================================================
+' 8. FILES & ATTACHMENTS
+' ============================================================
+
+package "Files & attachments" as file_pkg #F1F8E9 {
+
+    entity "Attachment" as attachment {
+        * id : UUID <<PK>>
+        --
+        * patient_id : UUID <<FK>>
+        appointment_id : UUID <<FK>>
+        medical_record_id : UUID <<FK>>
+        * file_name : VARCHAR(255)
+        * file_type : ENUM(PDF, IMAGE, TEXT, DOCUMENT, COMPRESSED) <<V1,V21>>
+        * file_path : VARCHAR(500)
+        file_size : BIGINT
+        description : TEXT
+        * uploaded_by : UUID <<FK>>
+        uploaded_at : TIMESTAMPTZ <<V20>>
+    }
+
+    patient ||--o{ attachment
+    appointment |o--o{ attachment
+    medical_record |o--o{ attachment
+    employee ||--o{ attachment : uploaded_by
+}
+
+' ============================================================
+' 9. INVENTORY
+' ============================================================
+
+package "Inventory" as inventory_pkg #EFEBE9 {
+
+    entity "InventoryCategory" as inventory_category {
+        * id : UUID <<PK>>
+        --
+        * name : VARCHAR(100) <<UNIQUE>>
+        description : TEXT
+    }
+
+    entity "InventoryItem" as inventory_item {
+        * id : UUID <<PK>>
+        --
+        * category_id : UUID <<FK>>
+        * branch_id : UUID <<FK>>
+        room_id : UUID <<FK>>
+        * name : VARCHAR(255)
+        unit : VARCHAR(50)
+        * quantity : DECIMAL(10,2)
+        min_quantity : DECIMAL(10,2)
+        cost_price : DECIMAL(12,2)
+    }
+
+    entity "InventoryOperation" as inventory_operation {
+        * id : UUID <<PK>>
+        --
+        * item_id : UUID <<FK>>
+        * employee_id : UUID <<FK>>
+        * operation_type : ENUM
+        * quantity : DECIMAL(10,2)
+        appointment_id : UUID <<FK>>
+        notes : TEXT
+        created_at : TIMESTAMPTZ <<V20>>
+    }
+
+    entity "InventoryAccess" as inventory_access {
+        * id : UUID <<PK>>
+        --
+        employee_id : UUID <<FK>>
+        role_id : UUID <<FK>>
+        * category_id : UUID <<FK>>
+    }
+
+    entity "ServiceInventoryItem" as service_inventory_item {
+        * id : UUID <<PK>>
+        --
+        * service_id : UUID <<FK>>
+        * inventory_item_id : UUID <<FK>>
+        * quantity : DECIMAL(10,2)
+    }
+
+    inventory_category ||--o{ inventory_item
+    branch ||--o{ inventory_item
+    room |o--o{ inventory_item
+
+    inventory_item ||--o{ inventory_operation
+    employee ||--o{ inventory_operation
+    appointment |o--o{ inventory_operation
+
+    employee |o--o{ inventory_access
+    role |o--o{ inventory_access
+    inventory_category ||--o{ inventory_access
+
+    service ||--o{ service_inventory_item
+    inventory_item ||--o{ service_inventory_item
+}
+
+' ============================================================
+' 10. NOTIFICATIONS & INTEGRATIONS
+' ============================================================
+
+package "Notifications & integrations" as notification_pkg #F3E5F5 {
+
+    entity "Notification" as notification {
+        * id : UUID <<PK>>
+        --
+        * patient_id : UUID <<FK>>
+        appointment_id : UUID <<FK>>
+        * channel : ENUM(SMS, EMAIL)
+        * type : ENUM
+        content : TEXT
+        * status : ENUM
+        sent_at : TIMESTAMPTZ <<V20>>
+        created_at : TIMESTAMPTZ <<V20>>
+    }
+
+    entity "Integration" as integration {
+        * id : UUID <<PK>>
+        --
+        * type : ENUM
+        * name : VARCHAR(255)
+        config : JSONB
+        is_active : BOOLEAN
+        created_at : TIMESTAMPTZ <<V20>>
+    }
+
+    patient ||--o{ notification
+    appointment |o--o{ notification
+}
+
+' ============================================================
+' 11. SYSTEM ENTITIES
+' ============================================================
+
+package "System" as system_pkg #ECEFF1 {
+
+    entity "AuditLog" as audit_log {
+        * id : UUID <<PK>>
+        --
+        * employee_id : UUID <<FK>>
+        * action : VARCHAR(50)
+        * entity_type : VARCHAR(100)
+        entity_id : UUID
+        old_value : JSONB
+        new_value : JSONB
+        ip_address : VARCHAR(45)
+        * timestamp : TIMESTAMPTZ <<V20>>
+    }
+
+    note right of audit_log
+        Indexes (V17): timestamp, entity_type+entity_id,
+        employee_id+timestamp
+        Retention: 90 days (auto-cleanup via scheduler)
+        Full audit for MEDICAL_RECORD (reads + writes)
+    end note
+
+    entity "SystemSetting" as system_setting {
+        * id : UUID <<PK>>
+        --
+        branch_id : UUID <<FK>>
+        * key : VARCHAR(100)
+        value : TEXT
+        description : TEXT
+    }
+
+    employee ||--o{ audit_log
+    branch |o--o{ system_setting
+}
+
+' ============================================================
+' 12. CRM (MVC posts / SSE)
+' ============================================================
+
+package "CRM" as crm_pkg #E1F5FE {
+
+    entity "CrmPost" as crm_post {
+        * id : BIGSERIAL <<PK>>
+        --
+        * title : VARCHAR(500)
+        * body : TEXT
+        * created_at : TIMESTAMPTZ
+        * updated_at : TIMESTAMPTZ
+    }
+
+    note bottom of crm_post
+        V13: index on created_at DESC;
+        no FKs to the rest of the model
+    end note
+}
+
+note as indexes_note
+    TIMESTAMPTZ (V20): date/time columns listed in the migration
+    are stored with time zone (historically UTC).
+    --
+    Performance indexes (V18) on high-volume tables:
+    appointment (patient_id, employee_id, branch_id, status, created_at, time_slot_id)
+    medical_record (patient_id, appointment_id, employee_id, updated_at)
+    patient (organization_id, full_name)
+    payment (appointment_id, payment_status, created_at)
+    time_slot (employee_id+slot_date, branch_id, slot_date+is_available)
+    lab_order / lab_order_item, inventory_operation,
+    notification, attachment, prescription, diagnosis,
+    employee_role, patient_tag, salary_record
+end note
+
+@enduml

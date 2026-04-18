@@ -2,6 +2,14 @@
 
 Backend for Medical Information System powered by Kotlin and Micronaut
 
+## Documentation
+
+| Resource | Description |
+| -------- | ----------- |
+| [docs/README.md](docs/README.md) | Documentation index and project layout overview |
+| [docs/openapi.yaml](docs/openapi.yaml) | OpenAPI 3.1: REST `/api/**` routes, auth, RBAC (`x-required-permission`), GraphQL/Swagger notes |
+| [docs/erd.puml](docs/erd.puml) | PlantUML database ERD (render locally; exported diagram: [`mis_erd.svg`](./mis_erd.svg)) |
+
 ## ERD (Data Model)
 
 ![ERD data model](./mis_erd.svg)
