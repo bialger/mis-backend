@@ -9,7 +9,6 @@ import com.bialger.domain.scheduling.enums.AppointmentSource
 import com.bialger.domain.scheduling.enums.AppointmentStatus
 import com.bialger.domain.scheduling.repository.AppointmentRepository
 import com.bialger.domain.scheduling.repository.TimeSlotRepository
-import com.bialger.domain.system.AuditLogService
 import com.bialger.web.DomainMvcEventEmitter
 import jakarta.inject.Singleton
 import java.time.Instant
@@ -32,7 +31,6 @@ class AppointmentMvcService(
     private val roomRepository: RoomRepository,
     private val branchRepository: BranchRepository,
     private val timeSlotRepository: TimeSlotRepository,
-    private val auditLogService: AuditLogService,
     private val domainMvcEventEmitter: DomainMvcEventEmitter
 ) {
 
@@ -114,12 +112,6 @@ class AppointmentMvcService(
             updatedAt = now
         )
         appointmentRepository.save(entity)
-        writeAuditLog(
-            actorId = createdBy ?: employeeId,
-            action = "CREATED",
-            entityId = id,
-            newValue = """{"status":"${status.name}","patientId":"$patientId"}"""
-        )
         domainMvcEventEmitter.notify(TOPIC, "CREATED", id.toString(), patientId.toString())
         return entity
     }
@@ -160,25 +152,12 @@ class AppointmentMvcService(
             updatedAt = Instant.now()
         )
         appointmentRepository.update(updated)
-        writeAuditLog(
-            actorId = createdBy ?: employeeId,
-            action = "UPDATED",
-            entityId = id,
-            oldValue = """{"status":"${existing.status.name}"}""",
-            newValue = """{"status":"${status.name}","patientId":"$patientId"}"""
-        )
         domainMvcEventEmitter.notify(TOPIC, "UPDATED", id.toString(), patientId.toString())
         return updated
     }
 
     fun delete(id: UUID) {
         val existing = appointmentRepository.findById(id).orElseThrow { IllegalArgumentException("Not found") }
-        writeAuditLog(
-            actorId = existing.employeeId,
-            action = "DELETED",
-            entityId = id,
-            oldValue = """{"status":"${existing.status.name}","patientId":"${existing.patientId}"}"""
-        )
         appointmentRepository.deleteById(id)
         domainMvcEventEmitter.notify(TOPIC, "DELETED", id.toString(), existing.patientId.toString())
     }
@@ -187,32 +166,8 @@ class AppointmentMvcService(
         val existing = appointmentRepository.findById(id).orElseThrow { IllegalArgumentException("Not found") }
         val updated = existing.copy(status = status, updatedAt = Instant.now())
         appointmentRepository.update(updated)
-        writeAuditLog(
-            actorId = existing.employeeId,
-            action = "STATUS_CHANGED",
-            entityId = id,
-            oldValue = """{"status":"${existing.status.name}"}""",
-            newValue = """{"status":"${status.name}"}"""
-        )
         domainMvcEventEmitter.notify(TOPIC, "UPDATED", id.toString(), existing.patientId.toString())
         return updated
-    }
-
-    private fun writeAuditLog(
-        actorId: UUID,
-        action: String,
-        entityId: UUID,
-        oldValue: String? = null,
-        newValue: String? = null
-    ) {
-        auditLogService.log(
-            actorId = actorId,
-            action = action,
-            entityType = AuditLogService.APPOINTMENT,
-            entityId = entityId,
-            oldValue = oldValue,
-            newValue = newValue
-        )
     }
 
     companion object {

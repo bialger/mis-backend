@@ -26,6 +26,8 @@ data class AuditLogEntryDto(
     val entityId: String?,
     val oldValue: String?,
     val newValue: String?,
+    val ipAddress: String?,
+    val userAgent: String?,
     val timestamp: String,
     /** Alias for timestamp — kept for SPA backward compatibility. */
     val ts: String,

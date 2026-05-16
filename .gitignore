@@ -4,6 +4,7 @@
 # VS Code
 .history/
 .vscode/
+.idea/
 
 # Log file
 *.log
