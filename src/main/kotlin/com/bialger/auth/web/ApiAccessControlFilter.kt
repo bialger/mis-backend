@@ -3,6 +3,7 @@ package com.bialger.auth.web
 import com.bialger.api.error.ApiErrorResponse
 import com.bialger.auth.application.AccessControlService
 import com.bialger.auth.application.CurrentUserContextService
+import com.bialger.domain.system.AuditLogService
 import io.micronaut.core.order.Ordered
 import io.micronaut.http.HttpMethod
 import io.micronaut.http.HttpRequest
@@ -16,11 +17,13 @@ import io.micronaut.http.filter.ServerFilterChain
 import io.micronaut.security.authentication.Authentication
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
+import java.util.UUID
 
 @Filter("/api/**")
 class ApiAccessControlFilter(
     private val currentUserContextService: CurrentUserContextService,
-    private val accessControlService: AccessControlService
+    private val accessControlService: AccessControlService,
+    private val auditLogService: AuditLogService
 ) : HttpServerFilter, Ordered {
 
     override fun doFilter(
@@ -33,6 +36,7 @@ class ApiAccessControlFilter(
         val authentication = request.getUserPrincipal(Authentication::class.java).orElse(null)
         val context = currentUserContextService.resolve(authentication)
             ?: return chain.proceed(request)
+
         if (isGrafanaApiPath(request.path) && context.roleCode != "SYSADMIN") {
             return Flux.just(
                 HttpResponse.status<ApiErrorResponse>(HttpStatus.FORBIDDEN).body(
@@ -43,6 +47,19 @@ class ApiAccessControlFilter(
                 )
             )
         }
+
+        // Audit log API is restricted to SYSADMIN only
+        if (isAuditApiPath(request.path) && context.roleCode != "SYSADMIN") {
+            return Flux.just(
+                HttpResponse.status<ApiErrorResponse>(HttpStatus.FORBIDDEN).body(
+                    ApiErrorResponse(
+                        error = "forbidden",
+                        message = "Audit log access is allowed only for SYSADMIN"
+                    )
+                )
+            )
+        }
+
         if (isAccessControlApiPath(request.path)) {
             val canReadAccess = context.roleCode == "SYSADMIN" || context.roleCode == "HEAD"
             val canWriteAccess = context.roleCode == "SYSADMIN"
@@ -61,15 +78,29 @@ class ApiAccessControlFilter(
                 )
             }
         }
+
         val requiredCode = accessControlService.requiredApiPermission(
             path = request.path,
             method = request.methodName,
             shellKind = request.parameters.get("kind")
         ) ?: return chain.proceed(request)
+
         val grantedCodes = accessControlService.resolveEffectivePermissionCodes(context.employee)
         if (requiredCode in grantedCodes) {
             return chain.proceed(request)
         }
+
+        // Log access denied for the medical records module
+        if (isMedicalRecordPath(request.path)) {
+            auditLogService.log(
+                actorId = context.employee.id,
+                action = "ACCESS_DENIED",
+                entityType = AuditLogService.MEDICAL_RECORD,
+                entityId = extractEntityIdFromPath(request.path),
+                newValue = """{"path":"${request.path}","method":"${request.methodName}","requiredPermission":"$requiredCode"}"""
+            )
+        }
+
         return Flux.just(
             HttpResponse.status<ApiErrorResponse>(HttpStatus.FORBIDDEN).body(
                 ApiErrorResponse(
@@ -85,6 +116,17 @@ class ApiAccessControlFilter(
     private fun isGrafanaApiPath(path: String): Boolean =
         path == "/api/grafana" || path.startsWith("/api/grafana/")
 
+    private fun isAuditApiPath(path: String): Boolean =
+        path == "/api/audit-logs" || path.startsWith("/api/audit-logs/")
+
     private fun isAccessControlApiPath(path: String): Boolean =
         path == "/api/access" || path.startsWith("/api/access/")
+
+    private fun isMedicalRecordPath(path: String): Boolean =
+        path == "/api/medical-records" || path.startsWith("/api/medical-records/")
+
+    private fun extractEntityIdFromPath(path: String): UUID? {
+        val segment = path.removePrefix("/api/medical-records/").split("/").firstOrNull() ?: return null
+        return runCatching { UUID.fromString(segment) }.getOrNull()
+    }
 }

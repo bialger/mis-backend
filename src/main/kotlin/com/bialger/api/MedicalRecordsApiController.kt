@@ -7,6 +7,7 @@ import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
+import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Patch
 import io.micronaut.http.annotation.PathVariable
@@ -78,5 +79,25 @@ open class MedicalRecordsApiController(
     open fun ensureForAppointment(@PathVariable appointmentId: UUID): MedicalRecordRestDto {
         val e = medicalRecordMvcService.ensureForAppointment(appointmentId)
         return medicalRecordMvcService.toDto(e)
+    }
+
+    @Delete("/{id}", produces = [MediaType.APPLICATION_JSON])
+    @Operation(
+        summary = "Delete a medical record",
+        description = "Permanently removes the medical record. The deletion is recorded in the audit log."
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Deleted record snapshot",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = MedicalRecordRestDto::class))]),
+        ApiResponse(responseCode = "404", description = "Not found"),
+        ApiResponse(responseCode = "403", description = "Forbidden — insufficient permissions")
+    )
+    open fun delete(@PathVariable id: UUID): MedicalRecordRestDto {
+        return try {
+            val e = medicalRecordMvcService.delete(id)
+            medicalRecordMvcService.toDto(e)
+        } catch (ex: IllegalArgumentException) {
+            throw HttpStatusException(HttpStatus.NOT_FOUND, "Not found")
+        }
     }
 }

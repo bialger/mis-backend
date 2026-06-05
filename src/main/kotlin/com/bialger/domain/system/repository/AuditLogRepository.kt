@@ -98,6 +98,55 @@ interface AuditLogRepository : CrudRepository<AuditLogEntity, UUID> {
     )
     fun findByDateRange(from: Instant, to: Instant, pageable: Pageable): Page<AuditLogEntity>
 
+    // --- Action-filtered paged queries ---
+
+    @Query(
+        value = """
+            SELECT * FROM audit_log
+            WHERE action = :action
+              AND timestamp >= :from
+              AND timestamp <= :to
+            ORDER BY timestamp DESC
+        """,
+        countQuery = """
+            SELECT COUNT(*) FROM audit_log
+            WHERE action = :action
+              AND timestamp >= :from
+              AND timestamp <= :to
+        """
+    )
+    fun findByActionAndDateRange(
+        action: String,
+        from: Instant,
+        to: Instant,
+        pageable: Pageable
+    ): Page<AuditLogEntity>
+
+    @Query(
+        value = """
+            SELECT * FROM audit_log
+            WHERE entity_type = :entityType
+              AND action = :action
+              AND timestamp >= :from
+              AND timestamp <= :to
+            ORDER BY timestamp DESC
+        """,
+        countQuery = """
+            SELECT COUNT(*) FROM audit_log
+            WHERE entity_type = :entityType
+              AND action = :action
+              AND timestamp >= :from
+              AND timestamp <= :to
+        """
+    )
+    fun findByEntityTypeAndActionAndDateRange(
+        entityType: String,
+        action: String,
+        from: Instant,
+        to: Instant,
+        pageable: Pageable
+    ): Page<AuditLogEntity>
+
     // --- Retention cleanup ---
 
     @Query("DELETE FROM audit_log WHERE timestamp < :cutoff")

@@ -102,10 +102,53 @@ Backend for Medical Information System powered by Kotlin and Micronaut
 
 ### System
 
-| Entity            | Description                                      |
-| ----------------- | ------------------------------------------------ |
-| **AuditLog**      | Audit trail (action, entity, old/new value, IP). |
-| **SystemSetting** | Key-value settings (global or per branch).       |
+| Entity            | Description                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| **AuditLog**      | Audit trail for medical records: action, entity type/ID, old/new value (JSONB), IP, User-Agent, timestamp. |
+| **SystemSetting** | Key-value settings (global or per branch).                                          |
+
+---
+
+## Audit Log
+
+The system captures a full audit trail for the **medical records** (`MEDICAL_RECORD`) module.
+
+### What is logged
+
+| Action | Trigger |
+|--------|---------|
+| `CREATED` | New medical record created via `POST /api/medical-records/ensure/{appointmentId}` |
+| `READ` | Single record fetched via `GET /api/medical-records/{id}` |
+| `READ_LIST` | Patient's records listed via `GET /api/medical-records?patientId=...` |
+| `UPDATED` | Record fields changed via `PATCH /api/medical-records/{id}` |
+| `DELETED` | Record deleted via `DELETE /api/medical-records/{id}` |
+| `ACCESS_DENIED` | Authenticated user attempted an operation without the required permission |
+
+### Stored fields
+
+Each entry stores: employee ID, action, entity type, entity UUID, old value (JSONB), new value (JSONB), IP address, User-Agent, and timestamp.
+
+### HTTP context capture
+
+`AuditRequestContextFilter` (order `SECURITY.after() + 5`) intercepts every `/api/**` request and populates a request-scoped `AuditRequestContext` bean with the client IP (`X-Forwarded-For` → remote address) and `User-Agent` header. `AuditLogService` reads from this context automatically — no boilerplate in service methods.
+
+### Viewing the audit log
+
+```
+GET /api/audit-logs                         # full log, paginated
+GET /api/audit-logs/medical-records         # MEDICAL_RECORD entries only
+GET /api/audit-logs/{id}                    # single entry
+```
+
+**Access is restricted to SYSADMIN** (enforced in `ApiAccessControlFilter`). Query parameters:
+
+| Parameter | Description |
+|-----------|-------------|
+| `entityType` | Filter by entity type (e.g. `MEDICAL_RECORD`) |
+| `action` | Filter by action (e.g. `UPDATED`, `DELETED`, `ACCESS_DENIED`) |
+| `entityId` | Filter by specific entity UUID |
+| `employeeId` | Filter by acting employee UUID |
+| `dateFrom` / `dateTo` | ISO-8601 instant range; default last 90 days |
 
 ---
 

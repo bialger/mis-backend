@@ -617,6 +617,8 @@ class CrmShellApplicationService(
             entityId = e.entityId?.toString(),
             oldValue = e.oldValue,
             newValue = e.newValue,
+            ipAddress = e.ipAddress,
+            userAgent = e.userAgent,
             timestamp = ts,
             ts = ts,
             diff = AuditDiffDto(old = e.oldValue, new = e.newValue)

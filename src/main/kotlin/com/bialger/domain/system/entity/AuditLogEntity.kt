@@ -20,5 +20,6 @@ data class AuditLogEntity(
     @field:TypeDef(type = DataType.OBJECT, converter = JsonbConverter::class)
     val newValue: String? = null,
     val ipAddress: String? = null,
+    val userAgent: String? = null,
     val timestamp: Instant
 )
