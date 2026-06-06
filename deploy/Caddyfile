@@ -1,22 +1,4 @@
 {$DOMAIN_NAME} {
     encode gzip zstd
-
-    # Backend: API, GraphQL, Swagger
-    handle /api/* {
-        reverse_proxy app:8000
-    }
-    handle /swagger* {
-        reverse_proxy app:8000
-    }
-    handle /graphql* {
-        reverse_proxy app:8000
-    }
-    handle /graphiql* {
-        reverse_proxy app:8000
-    }
-
-    # Frontend: everything else
-    handle {
-        reverse_proxy frontend:80
-    }
+    reverse_proxy app:8000
 }
