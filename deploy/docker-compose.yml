@@ -1,4 +1,9 @@
 services:
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/bialger/mis-frontend:latest}
+    container_name: mis-frontend
+    restart: unless-stopped
+
   app:
     image: ${MIS_IMAGE}
     container_name: mis
@@ -49,6 +54,8 @@ services:
     restart: unless-stopped
     depends_on:
       app:
+        condition: service_started
+      frontend:
         condition: service_started
     ports:
       - "80:80"
